@@ -1,45 +1,37 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
+import { View, StyleSheet } from 'react-native';
 
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
+export default function Layout() {
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
+    <View style={styles.container}>
+      <Tabs
+        screenOptions={({ route }) => ({
+          tabBarIcon: ({ color, size }) => {
+            let iconName;
+
+            if (route.name === 'home') iconName = 'home';
+            else if (route.name === 'energy') iconName = 'bolt';
+            else if (route.name === 'light') iconName = 'solar-panel';
+            else if (route.name === 'alerts') iconName = 'exclamation-triangle';
+            else if (route.name === 'settings') iconName = 'cog';
+
+            return <FontAwesome5 name={iconName} size={size} color={color} />;
           },
-          default: {},
-        }),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
+          tabBarActiveTintColor: '#FFA500',
+          tabBarInactiveTintColor: '#DFA200',
+          tabBarStyle: { backgroundColor: '#5C2D91', paddingBottom: 5, height: 60 },
+          headerShown: false,
+          tabBarShowLabel: false,
+        })}
       />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF', // Fundo branco para todas as telas
+  },
+});
