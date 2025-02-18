@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import crudDadosService from "./servicos/crud-dados/index.js"; // Apenas importa o serviço
+import crudDadosService from "./servicos/crud-dados/index.js"; // Importa o serviço corretamente
 
 dotenv.config(); // Carrega as variáveis do .env
 

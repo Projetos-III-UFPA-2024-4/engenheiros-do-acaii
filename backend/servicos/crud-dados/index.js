@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 
 // Middleware para registrar as rotas
-app.use("/api/dados", dadosRoutes);
+app.use("/servicos/crud-dados", dadosRoutes);
 
 // Testar a conexão com o banco quando o serviço iniciar
 const testarConexaoBanco = async () => {
@@ -23,4 +23,5 @@ const testarConexaoBanco = async () => {
 // Executa o teste ao carregar o serviço
 testarConexaoBanco();
 
+// Exporta o `app` para que o server.js consiga registrar este serviço corretamente
 export default app;
