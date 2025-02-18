@@ -1,9 +1,13 @@
 import { View, Text } from 'react-native';
+import CustomHeader from '@/components/Header';
 
 export default function SettingsScreen() {
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Configurações</Text>
+    <View style={{ }}>
+      <CustomHeader 
+        title="Configurações"
+        imageSource={require('@/assets/images/logo.svg')} // Substitua pelo caminho correto da imagem
+      />
     </View>
   );
 }
