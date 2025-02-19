@@ -1,9 +1,9 @@
 import connection from '../config/db.js';
 
 export const inserirDados = async (dados) => {
-    const sql = `INSERT INTO medicao_consumo (hora, potA, potB, potC, potTotal, consumoA, consumoB, consumoC, consumoTotal, 
+    const sql = `INSERT INTO medicao_consumo (idUsuarioTeste, hora, potA, potB, potC, potTotal, consumoA, consumoB, consumoC, consumoTotal, 
                                                geracaoA, geracaoB, geracaoC, geracaoTotal, iarms, ibrms, icrms, uarms, ubrms, ucrms) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     try {
         for (const dado of dados) {
@@ -15,7 +15,7 @@ export const inserirDados = async (dados) => {
 
             // ✅ Mapeia os nomes antigos do JSON para os novos nomes no banco
             const valores = [
-                dataHoraFormatada.toISOString().slice(0, 19).replace('T', ' '), // Formata para DATETIME
+                11, dataHoraFormatada.toISOString().slice(0, 19).replace('T', ' '), // Formata para DATETIME
                 dado.pa, dado.pb, dado.pc, dado.pt,   // potA, potB, potC, potTotal
                 dado.epa_c, dado.epb_c, dado.epc_c, dado.ept_c, // consumoA, consumoB, consumoC, consumoTotal
                 dado.epa_g, dado.epb_g, dado.epc_g, dado.ept_g, // geracaoA, geracaoB, geracaoC, geracaoTotal
