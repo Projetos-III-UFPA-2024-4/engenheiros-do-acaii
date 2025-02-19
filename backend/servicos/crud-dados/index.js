@@ -3,16 +3,16 @@ import pool from "./config/db.js";
 import dadosRoutes from "./routes/dadosRoutes.js";
 
 const app = express();
-app.use(express.json());
+app.use(express.json()); // ✅ Garante que o servidor entenda JSON no body
 
-// Middleware para registrar as rotas
-app.use("/servicos/crud-dados", dadosRoutes);
+// ✅ Registra as rotas do serviço "crud-dados"
+app.use("/", dadosRoutes);
 
-// Testar a conexão com o banco quando o serviço iniciar
+// Testar conexão com o banco ao iniciar
 const testarConexaoBanco = async () => {
     try {
         const connection = await pool.getConnection();
-        await connection.ping(); // Testa a conexão
+        await connection.ping();
         connection.release();
         console.log("✅ [crud-dados] Conexão com o banco bem-sucedida!");
     } catch (error) {
@@ -20,8 +20,6 @@ const testarConexaoBanco = async () => {
     }
 };
 
-// Executa o teste ao carregar o serviço
 testarConexaoBanco();
 
-// Exporta o `app` para que o server.js consiga registrar este serviço corretamente
 export default app;

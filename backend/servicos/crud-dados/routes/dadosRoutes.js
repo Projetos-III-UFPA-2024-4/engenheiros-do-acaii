@@ -1,9 +1,9 @@
 import express from 'express';
-import { inserirDadosArquivo } from '../controllers/controllerMedidor.js';
+import { receberJson } from '../controllers/controllerMedidor.js'; // ✅ Chama o controller para processar o JSON recebido
 
 const router = express.Router();
 
-// ✅ Chama corretamente o controller
-router.get('/testeDados1', inserirDadosArquivo);
+// ✅ Rota para receber qualquer JSON via POST
+router.post('/receber-json', receberJson);
 
 export default router;
