@@ -13,4 +13,4 @@ def enviar_json(arquivo_json, url_destino):
         print(f"Erro ao enviar JSON: {resposta.status_code} - {resposta.text}")
 
 # Exemplo de uso
-enviar_json('testeDados1.json', 'http://localhost:5000/servicos/crud-dados/receber-json')
+enviar_json('estadoNormal.json', 'http://localhost:5000/servicos/crud-dados/inversor-json')

@@ -1,12 +1,14 @@
 import express from "express";
 import pool from "./config/db.js";
 import dadosRoutes from "./routes/dadosRoutes.js";
+import inversorRoutes from "./routes/inversorRoutes.js";
 
 const app = express();
 app.use(express.json()); // ✅ Garante que o servidor entenda JSON no body
 
 // ✅ Registra as rotas do serviço "crud-dados"
-app.use("/", dadosRoutes);
+app.use("/medidor-json", dadosRoutes);
+app.use("/inversor-json", inversorRoutes);
 
 // Testar conexão com o banco ao iniciar
 const testarConexaoBanco = async () => {

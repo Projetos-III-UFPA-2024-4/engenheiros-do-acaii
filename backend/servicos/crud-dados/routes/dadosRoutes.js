@@ -4,6 +4,6 @@ import { receberJson } from '../controllers/controllerMedidor.js'; // ✅ Chama 
 const router = express.Router();
 
 // ✅ Rota para receber qualquer JSON via POST
-router.post('/receber-json', receberJson);
+router.post('/', receberJson);
 
 export default router;
