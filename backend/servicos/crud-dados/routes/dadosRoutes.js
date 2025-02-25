@@ -1,9 +1,9 @@
-import express from 'express';
-import { receberJson } from '../controllers/controllerMedidor.js'; // ✅ Chama o controller para processar o JSON recebido
+// import express from 'express';
+// import { receberDadosMedidor } from '../controllers/controllerMedidor.js'; // ✅ Chama o controller para processar o JSON recebido
 
-const router = express.Router();
+// const router = express.Router();
 
-// ✅ Rota para receber qualquer JSON via POST
-router.post('/', receberJson);
+// // ✅ Rota para receber qualquer JSON via POST
+// router.post('/', receberDadosMedidor);
 
-export default router;
+// export default router;

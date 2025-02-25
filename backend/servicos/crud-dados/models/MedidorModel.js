@@ -1,29 +1,62 @@
-import connection from '../config/db.js';
+import db from '../config/db.js';
 
-export const inserirDados = async (dados) => {
-    const sql = `INSERT INTO medicao_consumo (idUsuarioTeste, hora, potA, potB, potC, potTotal, consumoA, consumoB, consumoC, consumoTotal, 
-                                               geracaoA, geracaoB, geracaoC, geracaoTotal, iarms, ibrms, icrms, uarms, ubrms, ucrms) 
+/**
+ * Insere os dados do medidor no MySQL com controle de horário.
+ * @param {Array} dados - Array de objetos JSON já mapeados para as colunas do banco
+ */
+export const inserirDadosMedidor = async (dados) => {
+    const sql = `INSERT INTO medicao_consumo (idUsuarioTeste, hora, potA, potB, potC, potTotal, 
+                                               consumoA, consumoB, consumoC, consumoTotal, 
+                                               geracaoA, geracaoB, geracaoC, geracaoTotal, 
+                                               iarms, ibrms, icrms, uarms, ubrms, ucrms) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
+//Coluna de timestamp do banco rodando com o horario do servidor!
     try {
-        for (const dado of dados) {
-            // ✅ Converte os valores de hora, minuto e segundo para um formato DATETIME (YYYY-MM-DD HH:MM:SS)
-            const dataHoraFormatada = `${new Date().toISOString().slice(0, 10)} ${dado.hora}:${dado.minuto}:${dado.segundo}`;
+        const connection = await db.getConnection();
+        await connection.beginTransaction(); // Inicia transação para inserir múltiplos dados
 
-            // ✅ Mapeia os nomes antigos do JSON para os novos nomes no banco
+        for (const dado of dados) {
+            // ✅ O controller já converteu a hora para `YYYY-MM-DD HH:MM:SS`
+            if (!dado.hora) {
+                console.warn("⚠️ Dados de horário ausentes! Pulando inserção deste registro:", dado);
+                continue;
+            }
+
+            // ✅ Mapeia os campos do JSON para colunas no banco
             const valores = [
-                11, dataHoraFormatada, // Formata para DATETIME
-                dado.pa, dado.pb, dado.pc, dado.pt,   // potA, potB, potC, potTotal
-                dado.epa_c, dado.epb_c, dado.epc_c, dado.ept_c, // consumoA, consumoB, consumoC, consumoTotal
-                dado.epa_g, dado.epb_g, dado.epc_g, dado.ept_g, // geracaoA, geracaoB, geracaoC, geracaoTotal
-                dado.iarms, dado.ibrms, dado.icrms, dado.uarms, dado.ubrms, dado.ucrms
+                dado.idUsuarioTeste, // ID do usuário teste (padrão 11)
+                dado.hora, // Data e hora já formatadas pelo controller
+                dado.potA || null,
+                dado.potB || null,
+                dado.potC || null,
+                dado.potTotal || null,
+                dado.consumoA || null,
+                dado.consumoB || null,
+                dado.consumoC || null,
+                dado.consumoTotal || null,
+                dado.geracaoA || null,
+                dado.geracaoB || null,
+                dado.geracaoC || null,
+                dado.geracaoTotal || null,
+                dado.iarms || null,
+                dado.ibrms || null,
+                dado.icrms || null,
+                dado.uarms || null,
+                dado.ubrms || null,
+                dado.ucrms || null
             ];
 
             await connection.execute(sql, valores);
         }
+
+        await connection.commit(); // Confirma a transação
+        connection.release(); // Libera a conexão
+
+        console.log("✅ Dados do medidor inseridos com sucesso!");
         return { success: true };
+
     } catch (error) {
-        console.error("❌ Erro ao inserir dados no banco:", error);
+        console.error("❌ Erro ao inserir dados do medidor no banco:", error);
         return { success: false, error };
     }
 };
