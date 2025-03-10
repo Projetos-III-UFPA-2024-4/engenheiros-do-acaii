@@ -1,88 +1,114 @@
 import puppeteer from "puppeteer";
+import fs from "fs";
 
-const CPF = "05795503207"; // CPF sem pontos ou traços
-const DATA_NASCIMENTO = "16/05/2002"; // Data de nascimento COM BARRAS
+const CPF = "05795503207";
+const DATA_NASCIMENTO = "16/05/2002";
+const VALOR_CONTA_CONTRATO = "003025802461|2001090392";
 const URL_SITE = "https://pa.equatorialenergia.com.br/sua-conta/historico-de-consumo/";
+const CAMINHO_CSV = "C:/david/engenheiros-do-acaii/backend/servicos/previsao-consumo/dados_grafico.csv";
+const MODO_VISIVEL = true;
 
-(async () => {
-    const browser = await puppeteer.launch({ headless: false, defaultViewport: null });
+async function executarAutomacao() {
+    const browser = await puppeteer.launch({ headless: !MODO_VISIVEL, defaultViewport: null });
     const page = await browser.newPage();
 
     try {
+        // 1. ACESSAR O SITE
         console.log("🌐 Acessando o site...");
         await page.goto(URL_SITE, { waitUntil: "networkidle2" });
 
-        // 1. FECHAR POP-UP (Clique em "CONTINUAR NO SITE")
+        // 2. FECHAR POP-UP
         try {
-            await page.waitForSelector(".btn-default", { visible: true, timeout: 5000 });
+            console.log("⏳ Aguardando pop-up aparecer...");
+            await page.waitForSelector(".btn-default", { timeout: 15000, visible: true });
             await page.click(".btn-default");
-            console.log("✅ Pop-up fechado.");
+            console.log("✅ Pop-up fechado com sucesso.");
         } catch {
-            console.log("⚠️ Nenhum pop-up encontrado.");
+            console.log("⚠️ Pop-up não encontrado a tempo! Tentando via JavaScript...");
+            await page.evaluate(() => {
+                let botao = document.querySelector(".btn-default");
+                if (botao) botao.click();
+            });
         }
 
-        // 2. INSERIR CPF
-        await page.waitForSelector("#identificador-otp", { visible: true });
-        await page.type("#identificador-otp", CPF, { delay: 100 });
-        console.log("✅ CPF inserido.");
+        // 3. INSERIR CPF
+        console.log("⏳ Preenchendo CPF...");
+        await page.waitForSelector("#login-box-form-otp #identificador-otp", { timeout: 5000 });
+        await page.type("#login-box-form-otp #identificador-otp", CPF, { delay: 100 });
+        await page.keyboard.press("Tab");
+        console.log("✅ CPF inserido corretamente.");
 
-        // 3. CLICAR NO PRIMEIRO BOTÃO "ENTRAR"
-        await page.waitForSelector("#envia-identificador-otp", { visible: true });
-        await page.click("#envia-identificador-otp");
+        // 4. CLICAR NO PRIMEIRO BOTÃO "ENTRAR"
+        console.log("⏳ Clicando no primeiro botão 'Entrar'...");
+        await page.click("#login-box-form-otp #envia-identificador-otp");
         console.log("✅ Primeiro botão 'Entrar' clicado.");
 
-        // 4. INSERIR DATA DE NASCIMENTO
-        await page.waitForSelector("#senha-identificador", { visible: true });
-        await page.type("#senha-identificador", DATA_NASCIMENTO, { delay: 100 });
-        console.log("✅ Data de nascimento inserida.");
+        // 5. INSERIR DATA DE NASCIMENTO
+        console.log("⏳ Aguardando campo de data de nascimento...");
+        await page.waitForSelector("#login-box-form #senha-identificador", { timeout: 5000 });
+        await page.type("#login-box-form #senha-identificador", DATA_NASCIMENTO, { delay: 100 });
+        await page.keyboard.press("Tab");
+        console.log("✅ Data de nascimento inserida corretamente.");
 
-        // 5. CLICAR NO SEGUNDO BOTÃO "ENTRAR"
-        await page.waitForSelector("#envia-identificador", { visible: true });
-        await page.click("#envia-identificador");
+        // 6. CLICAR NO SEGUNDO BOTÃO "ENTRAR"
+        console.log("⏳ Clicando no segundo botão 'Entrar'...");
+        await page.click("#login-box-form #envia-identificador");
         console.log("✅ Segundo botão 'Entrar' clicado.");
 
-        // 6. AGUARDAR A SELEÇÃO DA CONTA CONTRATO
-        console.log("⏳ Aguardando a exibição da conta contrato...");
-        await page.waitForSelector("#conta_contrato", { visible: true, timeout: 30000 });
+        // 7. SELECIONAR A CONTA CONTRATO PELO VALOR
+        console.log("⏳ Aguardando a exibição da área de seleção de conta contrato...");
+        await page.waitForSelector(".select-wrap #conta_contrato", { timeout: 10000 });
 
-        // 7. SELECIONAR A SEGUNDA CONTA (SE EXISTIR)
-        const contas = await page.$$("#conta_contrato option");
-        if (contas.length > 1) {
-            await page.select("#conta_contrato", contas[1].value);
-            console.log("✅ Segunda conta contrato selecionada.");
-        } else {
-            console.log("⚠️ Apenas uma conta contrato disponível.");
+        console.log(`⏳ Tentando selecionar conta contrato: ${VALOR_CONTA_CONTRATO}`);
+        await page.select("#conta_contrato", VALOR_CONTA_CONTRATO);
+        console.log(`✅ Conta contrato selecionada pelo valor: ${VALOR_CONTA_CONTRATO}`);
+
+        // 8. EXTRAIR DADOS DO GRÁFICO
+        console.log("⏳ Aguardando carregamento do gráfico...");
+        await page.waitForSelector(".chart-historic canvas", { timeout: 10000 });
+
+        console.log("📊 Extraindo dados do gráfico...");
+        const dadosGrafico = await page.evaluate(() => {
+            let labels = [];
+            let valores = [];
+
+            // O site usa Chart.js para renderizar os gráficos
+            let chart = Chart.instances[0]; // Captura o primeiro gráfico na página
+            if (chart) {
+                labels = chart.data.labels;
+                valores = chart.data.datasets[0].data;
+            }
+
+            return labels.map((mes, index) => ({
+                mes,
+                consumo: valores[index]
+            }));
+        });
+
+        if (dadosGrafico.length === 0) {
+            console.log("❌ Erro: Nenhum dado foi extraído do gráfico.");
+            return;
         }
 
-        // 8. AGUARDAR O GRÁFICO CARREGAR
-        console.log("⏳ Aguardando o carregamento do gráfico...");
-        await page.waitForSelector("canvas", { visible: true, timeout: 15000 });
+        console.log("✅ Dados do gráfico extraídos com sucesso.");
 
-        // 9. EXTRAIR DADOS DO GRÁFICO
-        const dados = await page.evaluate(() => {
-            const chart = Chart.instances[0]; 
-            return {
-                labels: chart.data.labels,
-                datasets: chart.data.datasets.map(ds => ({
-                    label: ds.label,
-                    data: ds.data
-                }))
-            };
+        // 9. SALVAR DADOS EM CSV
+        console.log("📂 Salvando dados no arquivo CSV...");
+        let csvContent = "Mês,Consumo\n";
+        dadosGrafico.forEach(dado => {
+            csvContent += `${dado.mes},${dado.consumo}\n`;
         });
 
-        // 10. SALVAR DADOS EM CSV
-        const fs = await import("fs");
-        let csvContent = "Mês," + dados.datasets.map(ds => ds.label).join(",") + "\n";
-        dados.labels.forEach((label, i) => {
-            csvContent += label + "," + dados.datasets.map(ds => ds.data[i]).join(",") + "\n";
-        });
+        fs.writeFileSync(CAMINHO_CSV, csvContent, "utf-8");
+        console.log(`✅ Arquivo CSV salvo com sucesso em: ${CAMINHO_CSV}`);
 
-        fs.writeFileSync("previsao_consumo.csv", csvContent);
-        console.log("✅ Dados extraídos e salvos em 'previsao_consumo.csv'.");
-
-    } catch (error) {
-        console.error("❌ Erro durante a automação:", error);
     } finally {
+        if (MODO_VISIVEL) {
+            console.log("Pressione Enter para fechar o navegador...");
+            await new Promise(resolve => process.stdin.once("data", resolve));
+        }
         await browser.close();
     }
-})();
+}
+
+executarAutomacao();

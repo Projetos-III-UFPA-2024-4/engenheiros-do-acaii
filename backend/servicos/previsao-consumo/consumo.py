@@ -13,7 +13,7 @@ CPF = "05795503207"  # CPF SEM PONTOS OU TRAÇOS
 DATA_NASCIMENTO = "16/05/2002"  # Data de nascimento COM BARRAS (Respeitando máscara)
 VALOR_CONTA_CONTRATO = "003025802461|2001090392"  # Insira o valor exato da conta contrato
 URL_SITE = "https://pa.equatorialenergia.com.br/sua-conta/historico-de-consumo/"  # URL do site
-CAMINHO_CSV = r"C:\Users\SeuUsuario\Desktop\previsao_consumo.csv"  # Defina o caminho do CSV no seu computador
+CAMINHO_CSV = r"C:\david\engenheiros-do-acaii\backend\servicos\previsao-consumo\consumo.csv"  # Defina o caminho do CSV no seu computador
 MODO_VISIVEL = True  # Defina como False para rodar em segundo plano
 
 # === CONFIGURAÇÃO DO DRIVER ===
@@ -136,10 +136,58 @@ try:
     except Exception as e:
         print(f"❌ Erro: O campo de conta contrato demorou muito para aparecer. Detalhes: {e}")
 
+
     # 8. SALVAR DADOS EM CSV
-    print("⏳ Salvando o arquivo CSV...")
-    df.to_csv(CAMINHO_CSV, encoding="utf-8", index_label="Mês")
-    print(f"✅ Arquivo CSV salvo com sucesso em: {CAMINHO_CSV}")
+    # print("⏳ Salvando o arquivo CSV...")
+    # df.to_csv(CAMINHO_CSV, encoding="utf-8", index_label="Mês")
+    # print(f"✅ Arquivo CSV salvo com sucesso em: {CAMINHO_CSV}")
+
+    #EXCLUIR A ETAPA 9
+
+
+    # 8. EXTRAIR DADOS DO GRÁFICO
+    try:
+        print("⏳ Extraindo dados do gráfico...")
+
+        script_extracao = """
+        var chart = Chart.instances[0]; 
+        return {
+            labels: chart.data.labels,
+            datasets: chart.data.datasets.map(ds => ({label: ds.label, data: ds.data}))
+        };
+        """
+        
+        dados = driver.execute_script(script_extracao)
+
+        # Verificar se há dados extraídos
+        if not dados["labels"] or not dados["datasets"]:
+            print("⚠️ Nenhum dado foi encontrado no gráfico.")
+            df = None  # Definir df como None para evitar erro ao salvar
+
+        else:
+            labels = dados["labels"]
+            datasets = dados["datasets"]
+
+            # Criar o DataFrame com os dados do gráfico
+            df = pd.DataFrame({ds["label"]: ds["data"] for ds in datasets}, index=labels)
+
+            print("✅ Dados extraídos com sucesso!")
+
+    except Exception as e:
+        print(f"❌ Erro ao extrair dados do gráfico: {e}")
+        df = None  # Evita erro ao tentar salvar se a extração falhar
+
+    # 9. SALVAR DADOS EM CSV
+    if df is not None:
+        try:
+            print("⏳ Salvando o arquivo CSV...")
+            df.to_csv(CAMINHO_CSV, encoding="utf-8", index_label="Mês")
+            print(f"✅ Arquivo CSV salvo com sucesso em: {CAMINHO_CSV}")
+        except Exception as e:
+            print(f"❌ Erro ao salvar o arquivo CSV: {e}")
+    else:
+        print("⚠️ Nenhum dado foi extraído, arquivo CSV não será salvo.")
+
 
 finally:
     if MODO_VISIVEL:
