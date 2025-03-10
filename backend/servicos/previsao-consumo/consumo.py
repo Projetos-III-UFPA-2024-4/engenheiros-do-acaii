@@ -88,11 +88,44 @@ try:
         except:
             print("❌ Erro: Não foi possível inserir a Data de Nascimento.")
 
-    # 6. CLICAR NO SEGUNDO BOTÃO "ENTRAR"
+    # 6. CLICAR NO SEGUNDO BOTÃO "ENTRAR" E GARANTIR QUE O PROCESSAMENTO OCORREU
     try:
         botao_entrar_novamente = wait.until(EC.element_to_be_clickable((By.ID, "envia-identificador")))
         botao_entrar_novamente.click()
         print("✅ Segundo botão 'Entrar' clicado.")
+
+        # 🔄 Esperar até que o botão mude para "Aguarde"
+        try:
+            print("⏳ Aguardando o botão mudar para 'Aguarde'...")
+            wait.until(EC.text_to_be_present_in_element((By.ID, "envia-identificador"), "Aguarde"))
+            print("✅ O botão mudou para 'Aguarde'.")
+        except:
+            print("⚠️ O botão não mudou para 'Aguarde'. Tentando clicar novamente...")
+            botao_entrar_novamente.click()
+            time.sleep(2)  # Pequena pausa antes de verificar novamente
+
+        # 🔄 ESPERAR O PROCESSO DE CARREGAMENTO ANTES DA CONTA CONTRATO
+        try:
+            print("⏳ Aguardando o pop-up de 'Processando' aparecer...")
+            wait.until(EC.presence_of_element_located((By.CLASS_NAME, "processando-popup")))  # Ajuste a classe se necessário
+
+            print("⏳ Aguardando o pop-up de 'Processando' desaparecer...")
+            wait.until(EC.invisibility_of_element_located((By.CLASS_NAME, "processando-popup")))  # Espera ele sumir
+            print("✅ Processo de carregamento concluído.")
+
+        except:
+            print("⚠️ O pop-up de 'Processando' não foi encontrado, continuando mesmo assim...")
+
+        # 🔄 Verificar se o botão "Entrar" reapareceu
+        try:
+            botao_entrar_novamente = driver.find_element(By.ID, "envia-identificador")
+            if botao_entrar_novamente.is_displayed():
+                print("⚠️ O botão 'Entrar' reapareceu! Tentando clicar novamente...")
+                botao_entrar_novamente.click()
+                time.sleep(3)  # Espera extra para garantir o processamento
+        except:
+            print("✅ O botão 'Entrar' não reapareceu, continuando normalmente.")
+
     except:
         print("⚠️ Segundo botão 'Entrar' não encontrado! Tentando via JavaScript...")
         try:
@@ -100,6 +133,7 @@ try:
             print("✅ Segundo botão 'Entrar' clicado via JavaScript.")
         except:
             print("❌ Erro: Não foi possível clicar no segundo botão 'Entrar'.")
+
 
     # 7. ESPERAR E SELECIONAR A CONTA CONTRATO PELO VALOR
     try:
@@ -142,29 +176,59 @@ try:
     # df.to_csv(CAMINHO_CSV, encoding="utf-8", index_label="Mês")
     # print(f"✅ Arquivo CSV salvo com sucesso em: {CAMINHO_CSV}")
 
-    #EXCLUIR A ETAPA 9
+    #EXCLUIR A ETAPA 9 EM DIANTE
 
 
-    # 8. EXTRAIR DADOS DO GRÁFICO
+    # 8. ESPERAR O GRÁFICO CARREGAR (DETECTANDO O <CANVAS> CORRETAMENTE)
+    print("⏳ Aguardando o carregamento do gráfico...")
+
+    while True:
+        try:
+            # Verifica se o elemento <canvas> do gráfico está presente e visível
+            canvas_element = wait.until(EC.presence_of_element_located((By.ID, "historico-consumo")))
+            canvas_visible = wait.until(EC.visibility_of_element_located((By.ID, "historico-consumo")))
+
+            if canvas_element and canvas_visible:
+                print("✅ O gráfico foi detectado na tela!")
+                break  # Sai do loop pois o gráfico foi encontrado
+
+        except Exception as e:
+            pass  # Continua tentando até que o gráfico apareça
+
+        time.sleep(2)  # Aguarda 2 segundos antes de tentar novamente
+
+    # 9. EXTRAIR DADOS DO GRÁFICO
     try:
-        print("⏳ Extraindo dados do gráfico...")
+        print("⏳ Tentando extrair os dados do gráfico...")
 
         script_extracao = """
-        var chart = Chart.instances[0]; 
-        return {
-            labels: chart.data.labels,
-            datasets: chart.data.datasets.map(ds => ({label: ds.label, data: ds.data}))
-        };
+        var charts = Object.values(Chart.instances);
+        if (charts.length > 0) {
+            var chart = charts[0];  // Pega o primeiro gráfico carregado
+            return {
+                labels: chart.data.labels,
+                datasets: chart.data.datasets.map(ds => ({label: ds.label, data: ds.data}))
+            };
+        } else {
+            return null;
+        }
         """
-        
+
         dados = driver.execute_script(script_extracao)
 
         # Verificar se há dados extraídos
-        if not dados["labels"] or not dados["datasets"]:
-            print("⚠️ Nenhum dado foi encontrado no gráfico.")
-            df = None  # Definir df como None para evitar erro ao salvar
+        if not dados or not dados["labels"] or not dados["datasets"]:
+            print("⚠️ Nenhum dado foi encontrado no gráfico. Tentando novamente após 3 segundos...")
+            time.sleep(3)  # Dá mais tempo para carregamento assíncrono
+            dados = driver.execute_script(script_extracao)  # Tenta extrair os dados novamente
 
-        else:
+            if not dados or not dados["labels"] or not dados["datasets"]:
+                print("❌ Falha ao extrair dados do gráfico após tentativa extra.")
+                df = None  # Definir df como None para evitar erro ao salvar
+            else:
+                print("✅ Dados extraídos na segunda tentativa!")
+
+        if dados:
             labels = dados["labels"]
             datasets = dados["datasets"]
 
@@ -177,7 +241,18 @@ try:
         print(f"❌ Erro ao extrair dados do gráfico: {e}")
         df = None  # Evita erro ao tentar salvar se a extração falhar
 
-    # 9. SALVAR DADOS EM CSV
+    # 10. SALVAR DADOS EM CSV
+    if df is not None:
+        try:
+            print("⏳ Salvando o arquivo CSV...")
+            df.to_csv(CAMINHO_CSV, encoding="utf-8", index_label="Mês")
+            print(f"✅ Arquivo CSV salvo com sucesso em: {CAMINHO_CSV}")
+        except Exception as e:
+            print(f"❌ Erro ao salvar o arquivo CSV: {e}")
+    else:
+        print("⚠️ Nenhum dado foi extraído, arquivo CSV não será salvo.")
+
+    # 11. SALVAR DADOS EM CSV
     if df is not None:
         try:
             print("⏳ Salvando o arquivo CSV...")
