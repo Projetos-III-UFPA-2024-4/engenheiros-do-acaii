@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/api/api_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,135 +18,126 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late Future<List<dynamic>> pessoas;
+
+  @override
+  void initState() {
+    super.initState();
+    pessoas = ApiService.buscarPessoas(); // Chama a API ao iniciar
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[200],
-      // appBar: AppBar(
-      //   backgroundColor: Colors.transparent,
-      //   elevation: 0,
-      //   title: const Text("Home", style: TextStyle(color: Colors.black)),
-      //   centerTitle: true,
-      // ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Saudações e nome do usuário
-              const Text(
-                "Olá!",
-                style: TextStyle(fontSize: 20, color: Colors.black54),
-              ),
-              const Text(
-                "Glauco Gonçalves",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 5),
-              const Text(
-                "Segunda 18, 2025",
-                style: TextStyle(fontSize: 16, color: Colors.black45),
-              ),
+      body: FutureBuilder<List<dynamic>>(
+        future: pessoas,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text("Erro ao carregar dados: ${snapshot.error}"));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text("Nenhum dado encontrado."));
+          } else {
+            var pessoa = snapshot.data![0]; // Pegando a primeira pessoa da lista
 
-              const SizedBox(height: 20),
-
-              // Seletor de período
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ChoiceChip(
-                    label: const Text("Hoje"),
-                    selected: true,
-                    selectedColor: Colors.purple,
-                    labelStyle: const TextStyle(color: Colors.white),
-                    onSelected: (_) {},
-                  ),
-                  ChoiceChip(
-                    label: const Text("Essa semana"),
-                    selected: false,
-                    onSelected: (_) {},
-                  ),
-                  ChoiceChip(
-                    label: const Text("Esse mês"),
-                    selected: false,
-                    onSelected: (_) {},
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Cartões de Consumo e Produção
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildCard(
-                      icon: Icons.flash_on,
-                      title: "Consumo",
-                      value: "12 kWh",
-                      price: "R\$ 101,00",
-                      color: Colors.orange,
+                  const Text("Olá!", style: TextStyle(fontSize: 20, color: Colors.black54)),
+                  Text(
+                    pessoa["nome"] ?? "Sem Nome",
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildCard(
-                      icon: Icons.wb_sunny,
-                      title: "Produção",
-                      value: "13 kWh",
-                      price: "R\$ 103,00",
-                      color: Colors.amber,
-                    ),
+                  const SizedBox(height: 5),
+                  const Text("Segunda 18, 2025", style: TextStyle(fontSize: 16, color: Colors.black45)),
+                  const SizedBox(height: 20),
+
+                  // Seletor de período
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildChoiceChip("Hoje", true),
+                      _buildChoiceChip("Essa semana", false),
+                      _buildChoiceChip("Esse mês", false),
+                    ],
                   ),
-                ],
-              ),
 
-              const SizedBox(height: 10),
+                  const SizedBox(height: 20),
 
-              // Cartão de Estimativa de Fatura
-              _buildCard(
-                icon: Icons.attach_money,
-                title: "Valor estimado da próxima fatura",
-                value: "127 kWh",
-                price: "R\$ 143,00",
-                color: Colors.purple,
-                fullWidth: true,
-              ),
-
-              const SizedBox(height: 20),
-
-              // Alerta de Produção
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.yellow.shade100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning, color: Colors.orange, size: 30),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: const Text(
-                        "Atenção! Você está produzindo menos que o esperado. Avalie economizar!",
-                        style: TextStyle(fontSize: 16),
+                  // Cartões de Consumo e Produção
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildCard(
+                          icon: Icons.flash_on,
+                          title: "Consumo",
+                          value: pessoa['consumoTotal']?.toString() ?? "N/A",
+                          price: "R\$ 101,00",
+                          color: Colors.orange,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildCard(
+                          icon: Icons.wb_sunny,
+                          title: "Produção",
+                          value: "13 kWh",
+                          price: "R\$ 103,00",
+                          color: Colors.amber,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Cartão de Estimativa de Fatura
+                  _buildCard(
+                    icon: Icons.attach_money,
+                    title: "Valor estimado da próxima fatura",
+                    value: "127 kWh",
+                    price: "R\$ 143,00",
+                    color: Colors.purple,
+                    fullWidth: true,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Alerta de Produção
+                  _buildAlerta(),
+                ],
               ),
-            ],
-          ),
-        ),
+            );
+          }
+        },
       ),
+    );
+  }
+
+  // Widget para construir os ChoiceChips
+  Widget _buildChoiceChip(String label, bool isSelected) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: Colors.purple,
+      labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
+      onSelected: (_) {},
     );
   }
 
@@ -178,18 +170,32 @@ class HomePage extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 30),
           const SizedBox(height: 5),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 14, color: Colors.black54),
-          ),
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(value, style: const TextStyle(fontSize: 14, color: Colors.black54)),
           const SizedBox(height: 10),
-          Text(
-            price,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          Text(price, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  // Widget para construir o alerta de produção
+  Widget _buildAlerta() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.yellow.shade100,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning, color: Colors.orange, size: 30),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              "Atenção! Você está produzindo menos que o esperado. Avalie economizar!",
+              style: TextStyle(fontSize: 16),
+            ),
           ),
         ],
       ),

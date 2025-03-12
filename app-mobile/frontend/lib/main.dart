@@ -4,6 +4,7 @@ import 'package:frontend/screens/chat.dart';
 import 'package:frontend/screens/consumption.dart';
 import 'package:frontend/screens/generation.dart';
 import 'package:frontend/screens/home_page.dart';
+import 'package:frontend/screens/teste.dart';
 
 void main() {
   runApp(const MyApp());
@@ -38,6 +39,7 @@ class HomeScreenState extends State<HomeScreen> {
     const GenerationPage(),
     const AlertsPage(),
     const ChatPage(),
+    PessoasScreen(),
   ];
 
   // Método para trocar de tela quando um item é selecionado
@@ -58,7 +60,7 @@ class HomeScreenState extends State<HomeScreen> {
         selectedItemColor: Colors.white, // Cor do item selecionado
         unselectedItemColor: Colors.white70, // Cor dos itens não selecionados
         currentIndex: _selectedIndex, // Índice da tela atual
-        onTap: _onItemTapped, // Função ao clicar nos itens
+        onTap: _onItemTapped, // Função ao clicar nos ite ns
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
           BottomNavigationBarItem(icon: Icon(Icons.flash_on), label: 'Consumo'),
@@ -68,6 +70,7 @@ class HomeScreenState extends State<HomeScreen> {
           ),
           BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Alertas'),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
+          BottomNavigationBarItem(icon: Icon(Icons.texture_sharp), label: 'teste'),
         ],
       ),
     );
