@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/alert.dart';
 import 'package:frontend/screens/chat.dart';
+import 'package:frontend/screens/consumption.dart';
+import 'package:frontend/screens/generation.dart';
 import 'package:frontend/screens/home_page.dart';
 
 void main() {
@@ -72,24 +74,4 @@ class HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class ConsumptionPage extends StatelessWidget {
-  const ConsumptionPage({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Página de Consumo', style: TextStyle(fontSize: 24)),
-    );
-  }
-}
-
-class GenerationPage extends StatelessWidget {
-  const GenerationPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Mais Opções', style: TextStyle(fontSize: 24)),
-    );
-  }
-}

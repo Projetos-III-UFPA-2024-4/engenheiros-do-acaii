@@ -38,7 +38,7 @@ class HomePage extends StatelessWidget {
             children: [
               // Saudações e nome do usuário
               const Text(
-                "Bom dia!",
+                "Olá!",
                 style: TextStyle(fontSize: 20, color: Colors.black54),
               ),
               const Text(
