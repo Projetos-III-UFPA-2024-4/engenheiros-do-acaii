@@ -77,79 +77,16 @@ class ConsumptionPageState extends State<ConsumptionPage> {
 
             const SizedBox(height: 20),
 
-            // Gráfico de Linhas - Consumo e Economia
+            // Gráfico de Barras - Consumo e Economia
             const Text(
               "Consumo vs Economia de Energia",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            Expanded(child: _buildLineChart()),
+            Expanded(child: _buildResponsiveBarChart()),
           ],
         ),
       ),
-    );
-  }
-
-  // ✅ Gráfico de Linhas (Consumo vs Economia)
-  Widget _buildLineChart() {
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(show: false),
-        borderData: FlBorderData(show: false),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 32,
-              getTitlesWidget: (double value, TitleMeta meta) {
-                return Text(
-                  value.toStringAsFixed(0),
-                  style: const TextStyle(fontSize: 12),
-                );
-              },
-            ),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              getTitlesWidget: (double value, TitleMeta meta) {
-                return Text(
-                  _getLabelForX(value.toInt()),
-                  style: const TextStyle(fontSize: 12),
-                );
-              },
-            ),
-          ),
-        ),
-        lineBarsData: [
-          // Linha do Consumo
-          LineChartBarData(
-            spots: _generateSpots(consumptionData[selectedFilter]!),
-            isCurved: true,
-            color: Colors.red,
-            barWidth: 3,
-            isStrokeCapRound: true,
-            dotData: FlDotData(show: false),
-          ),
-          // Linha da Economia
-          LineChartBarData(
-            spots: _generateSpots(savingsData[selectedFilter]!),
-            isCurved: true,
-            color: Colors.green,
-            barWidth: 3,
-            isStrokeCapRound: true,
-            dotData: FlDotData(show: false),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ✅ Gerar os pontos para o gráfico de linhas
-  List<FlSpot> _generateSpots(List<double> values) {
-    return List.generate(
-      values.length,
-      (index) => FlSpot(index.toDouble(), values[index]),
     );
   }
 
@@ -219,19 +156,87 @@ class ConsumptionPageState extends State<ConsumptionPage> {
     );
   }
 
-  // ✅ Método para calcular o total de energia consumida ou economizada
-  double _getTotal(List<double> values) {
-    return values.reduce((a, b) => a + b);
+  // ✅ Gráfico de Barras Responsivo ajustado para parecer com a Geração
+  Widget _buildResponsiveBarChart() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return BarChart(
+          BarChartData(
+            barGroups: List.generate(consumptionData[selectedFilter]!.length, (index) {
+              return BarChartGroupData(
+                x: index,
+                barRods: [
+                  BarChartRodData(
+                    toY: consumptionData[selectedFilter]![index],
+                    color: Colors.red,
+                    width: 16, // Mantendo a mesma largura das barras da geração
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  BarChartRodData(
+                    toY: savingsData[selectedFilter]![index],
+                    color: Colors.green,
+                    width: 16, // Mantendo a mesma largura das barras da geração
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ],
+              );
+            }),
+            borderData: FlBorderData(show: false),
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: true,
+              drawHorizontalLine: true,
+              getDrawingHorizontalLine: (value) {
+                return FlLine(
+                  color: Colors.grey.withOpacity(0.3),
+                  strokeWidth: 1,
+                  dashArray: [5, 5],
+                );
+              },
+              getDrawingVerticalLine: (value) {
+                return FlLine(
+                  color: Colors.grey.withOpacity(0.3),
+                  strokeWidth: 1,
+                  dashArray: [5, 5],
+                );
+              },
+            ),
+            titlesData: FlTitlesData(
+              leftTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (value, meta) {
+                    return Text(
+                      _getLabelForX(value.toInt()),
+                      style: const TextStyle(fontSize: 12),
+                    );
+                  },
+                  reservedSize: 32,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // ✅ Definir rótulos do eixo X
   String _getLabelForX(int index) {
-    Map<String, List<String>> labelsMap = {
-      "Dia": ["6AM", "7AM", "8AM", "9AM", "10AM", "12PM", "1PM"],
-      "Semana": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
-      "Mês": ["1", "5", "10", "15", "20", "25", "30"],
-    };
+    return ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][index];
+  }
 
-    return labelsMap[selectedFilter]![index];
+  // ✅ Método para calcular o total de energia consumida ou economizada
+  double _getTotal(List<double> values) {
+    return values.reduce((a, b) => a + b);
   }
 }
