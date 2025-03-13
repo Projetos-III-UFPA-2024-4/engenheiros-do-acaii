@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'chat.dart'; // Importe a página de chat
 
 class AlertsPage extends StatelessWidget {
   const AlertsPage({super.key});
@@ -10,10 +12,6 @@ class AlertsPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // leading: IconButton(
-        //   icon: const Icon(Icons.arrow_back, color: Colors.black),
-        //   onPressed: () => Navigator.pop(context),
-        // ),
         title: const Text(
           "Alertas",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
@@ -25,17 +23,6 @@ class AlertsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Ícone no canto superior direito
-            Align(
-              alignment: Alignment.topRight,
-              // child: Image.asset(
-              //   "assets/lightbulb.png", // Substituir pela imagem correta
-              //   width: 50,
-              // ),
-            ),
-
-            const SizedBox(height: 10),
-
             // Lista de Alertas
             Expanded(
               child: ListView(
@@ -43,11 +30,19 @@ class AlertsPage extends StatelessWidget {
                   _buildAlertCard(
                     title: "Baixa produção solar",
                     description: "A produção está 20% abaixo do esperado.",
+                    timestamp: DateTime.now().subtract(
+                      const Duration(minutes: 30),
+                    ), // 30 minutos atrás
+                    context: context,
                   ),
                   _buildAlertCard(
                     title: "O inversor desarmou!",
                     description:
-                        "Verificamos que ocorreu um desarme no inverso.",
+                        "Verificamos que ocorreu um desarme no inversor.",
+                    timestamp: DateTime.now().subtract(
+                      const Duration(hours: 2),
+                    ), // 2 horas atrás
+                    context: context,
                   ),
                 ],
               ),
@@ -59,7 +54,14 @@ class AlertsPage extends StatelessWidget {
   }
 
   // Widget para construir um cartão de alerta
-  Widget _buildAlertCard({required String title, required String description}) {
+  Widget _buildAlertCard({
+    required String title,
+    required String description,
+    required DateTime timestamp,
+    required BuildContext context,
+  }) {
+    String formattedTime = DateFormat('dd/MM/yyyy HH:mm').format(timestamp);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -97,12 +99,23 @@ class AlertsPage extends StatelessWidget {
             description,
             style: const TextStyle(fontSize: 14, color: Colors.black54),
           ),
+          const SizedBox(height: 5),
+          Text(
+            "📅 $formattedTime",
+            style: const TextStyle(fontSize: 13, color: Colors.black45),
+          ),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               GestureDetector(
-                onTap: () {},
+                onTap: () {
+                  // Redireciona para a página de chat
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ChatPage()),
+                  );
+                },
                 child: const Text(
                   "Falar com Açaizinho",
                   style: TextStyle(
@@ -112,7 +125,9 @@ class AlertsPage extends StatelessWidget {
                 ),
               ),
               GestureDetector(
-                onTap: () {},
+                onTap: () {
+                  // Aqui você pode adicionar a ação de avisar o suporte técnico
+                },
                 child: const Text(
                   "Avisar serviço técnico",
                   style: TextStyle(
