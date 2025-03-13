@@ -105,7 +105,7 @@ class _HomePageState extends State<HomePage> {
                       value: "${realData[selectedFilter]![1]} kWh",
                       price:
                           "R\$ ${(realData[selectedFilter]![1] * 1.2).toStringAsFixed(2)}",
-                      color: Colors.amber,
+                      color: Colors.orange,
                     ),
                   ),
                 ],
@@ -132,8 +132,8 @@ class _HomePageState extends State<HomePage> {
                     child: _buildComparisonCard(
                       title: "Consumo vs Geração (Real)",
                       data: realData,
-                      color1: Colors.orange,
-                      color2: Colors.green,
+                      color1: const Color.fromRGBO(255, 152, 0, 1),
+                      color2: Colors.purple,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -141,7 +141,7 @@ class _HomePageState extends State<HomePage> {
                     child: _buildComparisonCard(
                       title: "Consumo vs Geração (Previsto)",
                       data: predictedData,
-                      color1: Colors.blue,
+                      color1: Colors.orange,
                       color2: Colors.purple,
                     ),
                   ),
@@ -150,7 +150,7 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 20),
 
-              // Alerta de Produção (Mantido no Final)
+              // Alerta de Produção
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -257,7 +257,7 @@ class _HomePageState extends State<HomePage> {
     required Color color2,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -276,14 +276,14 @@ class _HomePageState extends State<HomePage> {
             title,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 10),
-          SizedBox(height: 150, child: _buildBarChart(data, color1, color2)),
+          const SizedBox(height: 20),
+          SizedBox(height: 300, child: _buildBarChart(data, color1, color2)),
         ],
       ),
     );
   }
 
-  // ✅ Criar gráfico de barras
+  // ✅ Criar gráfico de barras atualizado
   Widget _buildBarChart(
     Map<String, List<double>> data,
     Color color1,
@@ -292,12 +292,32 @@ class _HomePageState extends State<HomePage> {
     return BarChart(
       BarChartData(
         borderData: FlBorderData(show: false),
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (double value, TitleMeta meta) {
+                List<String> labels = ["Consumo", "Geração"];
+                return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  space: 5,
+                  child: Text(
+                    labels[value.toInt()],
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
         barGroups: _generateBarGroups(data, color1, color2),
       ),
     );
   }
 
-  // ✅ Gerar os dados para o gráfico de barras
   List<BarChartGroupData> _generateBarGroups(
     Map<String, List<double>> data,
     Color color1,
@@ -307,11 +327,25 @@ class _HomePageState extends State<HomePage> {
     return [
       BarChartGroupData(
         x: 0,
-        barRods: [BarChartRodData(toY: values[0], color: color1, width: 20)],
+        barRods: [
+          BarChartRodData(
+            toY: values[0],
+            color: color1,
+            width: 40,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ],
       ),
       BarChartGroupData(
         x: 1,
-        barRods: [BarChartRodData(toY: values[1], color: color2, width: 20)],
+        barRods: [
+          BarChartRodData(
+            toY: values[1],
+            color: color2,
+            width: 40,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ],
       ),
     ];
   }
