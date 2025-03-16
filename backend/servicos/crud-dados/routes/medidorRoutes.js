@@ -1,5 +1,5 @@
 import express from 'express';
-import { receberDadosMedidor } from '../controllers/controllerMedidor.js'; // ✅ Chama o controller para processar o JSON recebido
+import { receberDadosMedidor } from '../controllers/medidorController.js'; // ✅ Chama o controller para processar o JSON recebido
 
 const router = express.Router();
 
