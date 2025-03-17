@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:frontend/providers/navigation_provider.dart';
 import 'package:frontend/screens/alert.dart';
 import 'package:frontend/screens/chat.dart';
 import 'package:frontend/screens/consumption.dart';
 import 'package:frontend/screens/generation.dart';
 import 'package:frontend/screens/home_page.dart';
-import 'package:frontend/screens/teste.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [ChangeNotifierProvider(create: (_) => NavigationProvider())],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -17,50 +23,47 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const HomeScreen(),
+      // Define a rota inicial
+      initialRoute: '/',
+      // Mapeia as rotas nomeadas
+      routes: {
+        '/': (context) => const HomeScreen(), // Tela com BottomNavigationBar
+        '/alerts': (context) => const AlertsPage(),
+        '/chat': (context) => const ChatPage(),
+        '/consumption': (context) => const ConsumptionPage(),
+        '/generation': (context) => const GenerationPage(),
+        '/homePage': (context) => const HomePage(),
+      },
     );
   }
 }
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  @override
-  HomeScreenState createState() => HomeScreenState();
-}
-
-class HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0; // Índice da tela selecionada
-
-  // Lista de telas que serão exibidas ao trocar de índice
-  final List<Widget> _pages = [
+  static final List<Widget> _pages = [
     const HomePage(),
     const ConsumptionPage(),
     const GenerationPage(),
     const AlertsPage(),
     const ChatPage(),
-    PessoasScreen(),
   ];
-
-  // Método para trocar de tela quando um item é selecionado
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
+    final navigationProvider = Provider.of<NavigationProvider>(context);
+
     return Scaffold(
-      body: _pages[_selectedIndex], // Mostra a tela correspondente ao índice
+      // Exibe a página correspondente ao índice selecionado
+      body: _pages[navigationProvider.selectedIndex],
 
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Mantém os ícones visíveis
-        backgroundColor: Colors.purple, // Cor de fundo da barra
-        selectedItemColor: Colors.white, // Cor do item selecionado
-        unselectedItemColor: Colors.white70, // Cor dos itens não selecionados
-        currentIndex: _selectedIndex, // Índice da tela atual
-        onTap: _onItemTapped, // Função ao clicar nos ite ns
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.purple,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
+        currentIndex: navigationProvider.selectedIndex,
+        onTap: (index) => navigationProvider.changePage(index),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
           BottomNavigationBarItem(icon: Icon(Icons.flash_on), label: 'Consumo'),
@@ -70,11 +73,8 @@ class HomeScreenState extends State<HomeScreen> {
           ),
           BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Alertas'),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
-          BottomNavigationBarItem(icon: Icon(Icons.texture_sharp), label: 'teste'),
         ],
       ),
     );
   }
 }
-
-
