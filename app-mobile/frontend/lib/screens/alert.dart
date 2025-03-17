@@ -110,8 +110,8 @@ class AlertsPage extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: () {
-                  // Redireciona para a página de chat
-                  Navigator.pushReplacement(
+                  // Redireciona para a página de chat (mantém a navegação na pilha)
+                  Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const ChatPage()),
                   );
@@ -126,7 +126,24 @@ class AlertsPage extends StatelessWidget {
               ),
               GestureDetector(
                 onTap: () {
-                  // Aqui você pode adicionar a ação de avisar o suporte técnico
+                  // Ação de avisar o serviço técnico
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text("Aviso"),
+                        content: const Text("Aviso enviado ao serviço técnico."),
+                        actions: <Widget>[
+                          TextButton(
+                            child: const Text("OK"),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
                 },
                 child: const Text(
                   "Avisar serviço técnico",

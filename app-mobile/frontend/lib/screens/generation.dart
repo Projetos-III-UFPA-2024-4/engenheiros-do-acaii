@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-
 class GenerationPage extends StatefulWidget {
   const GenerationPage({super.key});
 
@@ -67,12 +66,8 @@ class GenerationPageState extends State<GenerationPage> {
                 _buildFilterButton("Mês"),
               ],
             ),
-
             const SizedBox(height: 20),
-
-            // Cartão de Ganhos Destacado
             _buildGainsCard(),
-
             const SizedBox(height: 10),
 
             // Cartões informativos
@@ -107,7 +102,6 @@ class GenerationPageState extends State<GenerationPage> {
             Expanded(child: _buildBarChart()),
 
             const SizedBox(height: 10),
-
             // Botão para mostrar previsões
             Center(
               child: ElevatedButton(
@@ -119,17 +113,14 @@ class GenerationPageState extends State<GenerationPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber,
                   foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 child: Text(
                   showPredictions ? "Ocultar Previsões" : "Ver Previsões",
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
           ],
         ),
@@ -157,7 +148,7 @@ class GenerationPageState extends State<GenerationPage> {
       ),
       child: Row(
         children: [
-          Icon(Icons.attach_money, size: 40, color: Colors.white),
+          const Icon(Icons.attach_money, size: 40, color: Colors.white),
           const SizedBox(width: 15),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,7 +205,8 @@ class GenerationPageState extends State<GenerationPage> {
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style:
+                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 5),
           Text(
@@ -277,9 +269,10 @@ class GenerationPageState extends State<GenerationPage> {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
+              reservedSize: 32,
               getTitlesWidget: (double value, TitleMeta meta) {
                 return SideTitleWidget(
-                  axisSide: meta.axisSide,
+                  meta: meta,
                   space: 6,
                   child: Text(
                     _getLabelForX(value.toInt()),
@@ -287,7 +280,6 @@ class GenerationPageState extends State<GenerationPage> {
                   ),
                 );
               },
-              reservedSize: 32,
             ),
           ),
         ),
@@ -311,7 +303,7 @@ class GenerationPageState extends State<GenerationPage> {
             width: 16,
             borderRadius: BorderRadius.circular(6),
           ),
-          if (showPredictions) // Adicionar previsão se ativado
+          if (showPredictions)
             BarChartRodData(
               toY: predictions[index],
               color: Colors.amber,
@@ -330,7 +322,6 @@ class GenerationPageState extends State<GenerationPage> {
       "Semana": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
       "Mês": ["1", "5", "10", "15", "20", "25", "30"],
     };
-
     return labelsMap[selectedFilter]![index];
   }
 
