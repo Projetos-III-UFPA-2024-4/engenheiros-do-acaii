@@ -16,7 +16,7 @@ const PrevisaoProducaoController = {
             // Pegar a data mais recente corretamente
             const dataMaisRecente = data.reduce((max, row) => new Date(row.timestamp) > new Date(max) ? row.timestamp : max, data[0].timestamp);
             
-            res.json({ "total_geracao_mes": totalGeracao, "data_mais_recente": dataMaisRecente });
+            res.json({ "total_geracao_prevista_mes": totalGeracao, "data_mais_recente": dataMaisRecente });
         } catch (error) {
             console.error("Erro ao buscar previsões de produção:", error);
             res.status(500).json({ message: "Erro interno do servidor" });

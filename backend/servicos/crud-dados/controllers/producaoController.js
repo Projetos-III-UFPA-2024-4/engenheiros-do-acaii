@@ -23,7 +23,7 @@ const ProducaoController = {
             
             // Retorna os dados no JSON
             res.json({ 
-                energia_total_kw: totalProducao, 
+                total_geracao_mes: totalProducao, 
                 data_mais_recente: ultimo_dia 
             });
         } catch (error) {
