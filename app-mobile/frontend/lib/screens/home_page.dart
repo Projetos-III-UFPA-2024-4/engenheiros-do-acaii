@@ -299,7 +299,7 @@ class _HomePageState extends State<HomePage> {
               getTitlesWidget: (double value, TitleMeta meta) {
                 List<String> labels = ["Consumo", "Geração"];
                 return SideTitleWidget(
-                  axisSide: meta.axisSide,
+                  meta: meta,
                   space: 5,
                   child: Text(
                     labels[value.toInt()],

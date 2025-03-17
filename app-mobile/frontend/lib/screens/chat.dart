@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/alert.dart';
 import 'package:intl/intl.dart';
 
 class ChatPage extends StatefulWidget {
@@ -165,7 +166,12 @@ class _ChatPageState extends State<ChatPage> {
   // Método para criar botões estilizados como cartões
   Widget _buildQuestionCard(String question, IconData icon) {
     return GestureDetector(
-      onTap: () => _showAnswer(question),
+      onTap: () {
+        _showAnswer(question);
+        // Aqui, ao tocar no cartão, você pode navegar para outra página, por exemplo, Alertas
+        //  pode usar o Navigator.pushNamed() para navegar para outra tela:
+        // Navigator.pushNamed(context, '/alerts');
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
