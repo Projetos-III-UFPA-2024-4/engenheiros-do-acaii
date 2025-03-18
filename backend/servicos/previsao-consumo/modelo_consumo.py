@@ -49,30 +49,70 @@ def get_db_connection():
         print(f"❌ Erro ao conectar ao banco de dados: {e}")
         return None
 
-# Função para puxar dados do banco e carregar em um DataFrame
-def puxar_dados_do_banco():
-    """Puxa os dados da tabela e carrega no DataFrame."""
+# # Função para puxar dados do banco e carregar em um DataFrame
+# def puxar_dados_do_banco():
+#     """Puxa os dados da tabela e carrega no DataFrame."""
+#     conn = get_db_connection()
+#     if conn:
+#         try:
+#             query = "SELECT hora FROM medicao_consumo;;"  # Consulta para pegar todos os dados da tabela
+#             df = pd.read_sql(query, conn)  # Carregar os dados diretamente para um DataFrame
+#             print("✅ Dados carregados com sucesso do banco!")
+#             return df
+#         except Exception as e:
+#             print(f"❌ Erro ao executar consulta: {e}")
+#         finally:
+#             conn.close()
+#             print("🔌 Conexão fechada.")
+#     else:
+#         return None
+
+# # 🔹 Carregar os dados do banco
+# data = puxar_dados_do_banco()
+
+def visualizar_dados_do_banco():
+    # Estabelece a conexão com o banco de dados
     conn = get_db_connection()
-    if conn:
-        try:
-            query = "SELECT * FROM medicao_consumo;"  # Consulta para pegar todos os dados da tabela
-            df = pd.read_sql(query, conn)  # Carregar os dados diretamente para um DataFrame
-            print("✅ Dados carregados com sucesso do banco!")
-            return df
-        except Exception as e:
-            print(f"❌ Erro ao executar consulta: {e}")
-        finally:
-            conn.close()
-            print("🔌 Conexão fechada.")
-    else:
+    
+    if not conn:
+        print("❌ Não foi possível conectar ao banco de dados.")
         return None
 
-# 🔹 Carregar os dados do banco
-data = puxar_dados_do_banco()
+    try:
+        with conn.cursor() as cursor:
+            # Consulta SQL para pegar todas as medições
+            query = """
+                SELECT id, hora, consumoTotal
+                FROM medicao_consumo;
+            """
+            cursor.execute(query)
+            
+            # Pega todos os resultados
+            todas_as_medicoes = cursor.fetchall()
+
+            # Verifica se há resultados
+            if todas_as_medicoes:
+                # Converte para um DataFrame do pandas para uso em modelos
+                df = pd.DataFrame(todas_as_medicoes)
+                return df  # Retorna o DataFrame com os dados
+            else:
+                print("Nenhuma medição encontrada.")
+                return None
+        
+    except pymysql.MySQLError as e:
+        print(f"❌ Erro ao realizar a consulta: {e}")
+        return None
+    
+    finally:
+        conn.close()
+
+# Chama a função e captura os dados
+data = visualizar_dados_do_banco()
 
 # Verificar os primeiros registros
-if data is not None:
-    print(data.head())
+# if data is not None:
+#     print("aqui")
+#     print(data["consumoTotal"].head())
 
 # from google.colab import files
 
@@ -93,17 +133,18 @@ data.head()
 
 preparação dos dados
 """
-
+data["consumoTotal"] = pd.to_numeric(data["consumoTotal"], errors='coerce')
+print(data[data["consumoTotal"].isna()])
 data["consumoTotal"] = data["consumoTotal"].astype(str)
 data["consumoTotal"] = data["consumoTotal"].str.replace(',', '.', regex=False)
 data["consumoTotal"] = data["consumoTotal"].astype(float)
 data.info()
 
 # Converter a coluna 'timestamp' para formato de data
-data['timestamp'] = pd.to_datetime(data['timestamp'])
+data['hora'] = pd.to_datetime(data['hora'])
 
 # Selecionar apenas as colunas necessárias para o Prophet
-df = data[['timestamp', 'consumoTotal']].rename(columns={'timestamp': 'ds', 'consumoTotal': 'y'})
+df = data[['hora', 'consumoTotal']].rename(columns={'hora': 'ds', 'consumoTotal': 'y'})
 
 # Garantir que a série temporal tenha uma frequência uniforme
 df = df.set_index("ds").asfreq("10min").reset_index()

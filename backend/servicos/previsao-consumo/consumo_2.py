@@ -7,8 +7,9 @@ TABLE_NAME = "medicao_consumo"
 
 # 🔹 Caminho do Arquivo CSV
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = os.path.join(BASE_DIR, "dados", "iced_consumo_janeiro_a_marco.csv")
+CSV_PATH = os.path.join(BASE_DIR, "dados", "teste.csv")
 
+# 🔹 Processar e inserir os dados do CSV no banco
 # 🔹 Processar e inserir os dados do CSV no banco
 def inserir_dados_csv():
     """Lê o CSV e insere os dados na tabela do banco."""
@@ -18,29 +19,44 @@ def inserir_dados_csv():
     
     conn = None  # Definir a variável 'conn' antes do bloco try
     try:
-        # Ler o arquivo CSV
-        df = pd.read_csv(CSV_PATH, delimiter=",", skipinitialspace=True)
+        # Ler o arquivo CSV com uma verificação mais rigorosa para o cabeçalho
+        df = pd.read_csv(CSV_PATH, delimiter=",", skipinitialspace=True, header=0)
         print(f"✅ CSV carregado com {len(df)} registros.")
+        
+        # Mostrar as primeiras linhas do dataframe para verificar se a coluna 'timestamp' está ok
+        print(df.head())
 
-        # Renomear colunas para coincidir com a tabela
+        # Verifique se a coluna "DateTime" está sendo lida corretamente
+        if 'DateTime' not in df.columns:
+            print("❌ A coluna 'DateTime' não foi encontrada no CSV.")
+            return
+
+        # Renomear as colunas para corresponder aos nomes esperados no banco de dados
         df.columns = ["timestamp", "potA", "potB", "potC", "potTotal", "consumoTotal"]
 
-        # ✅ Converter 'tempo' para DATETIME no formato aceito pelo MySQL
-        df["timestamp"] = pd.to_datetime(df["timestamp"], format="%Y/%m/%d %H:%M:%S", errors="coerce")
+        # Garantir que os dados da coluna 'timestamp' sejam convertidos corretamente
+        df['timestamp'] = pd.to_datetime(df['timestamp'], format="%d/%m/%Y %H:%M:%S", errors="coerce")
+
+        # Verificar se houve algum erro na conversão da coluna 'timestamp' para datetime
+        if df['timestamp'].isnull().any():
+            print(f"⚠️ Existem valores inválidos na coluna 'timestamp'! Esses valores serão ignorados.")
+
+        # Processar as colunas numéricas, exceto 'timestamp'
+        for col in df.columns:
+            if col != "timestamp":
+                df[col] = df[col].astype(str)
+                df[col] = df[col].str.replace(',', '.', regex=False)
+                df[col] = df[col].astype(float)
 
         # Substituir valores inválidos por None
         df = df.where(pd.notnull(df), None)
-
-        # Verificar se há valores inválidos na coluna 'tempo'
-        if df["timestamp"].isnull().any():
-            print("⚠️ Existem valores inválidos na coluna 'timestamp', alguns registros serão ignorados.")
 
         # Conectar ao banco e inserir os dados
         conn = get_db_connection()
         if conn:
             with conn.cursor() as cursor:
                 query = f"""
-                INSERT INTO `{TABLE_NAME}` (`timestamp`, `potA`, `potB`, `potC`, `potTotal`, `consumoTotal`)
+                INSERT INTO `{TABLE_NAME}` (`hora`, `potA`, `potB`, `potC`, `potTotal`, `consumoTotal`)
                 VALUES (%s, %s, %s, %s, %s, %s);
                 """
                 print(f"✅ Conectado ao banco de dados, começando a inserção...")
@@ -59,6 +75,62 @@ def inserir_dados_csv():
             conn.close()
             print("🔌 Conexão fechada.")
 
+
+            
+def excluir_dados_tabela():
+    """Exclui todos os dados da tabela 'medicao_consumo'."""
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                # Usando TRUNCATE para excluir todos os dados de forma eficiente
+                query = "TRUNCATE TABLE medicao_consumo;"
+                cursor.execute(query)
+                conn.commit()
+                print("✅ Todos os dados foram excluídos da tabela 'medicao_consumo'.")
+        except Exception as e:
+            print(f"❌ Erro ao excluir dados: {e}")
+        finally:
+            conn.close()
+            print("🔌 Conexão fechada.")
+            
+import pymysql
+from config.db import get_db_connection
+
+def visualizar_dados_do_banco():
+    # Estabelece a conexão com o banco de dados
+    conn = get_db_connection()
+    
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                # Consulta SQL para pegar todas as medições
+                query = """
+                    SELECT id, hora, consumoTotal
+                    FROM medicao_consumo;
+                """
+                cursor.execute(query)
+                
+                # Pega todos os resultados
+                todas_as_medicoes = cursor.fetchall()
+
+                # Imprime todas as medições
+                if todas_as_medicoes:
+                    for medicao in todas_as_medicoes:
+                        print(f'ID: {medicao["id"]}, Hora: {medicao["hora"]}, Consumo Total: {medicao["consumoTotal"]}')
+                else:
+                    print("Nenhuma medição encontrada.")
+        
+        except pymysql.MySQLError as e:
+            print(f"❌ Erro ao realizar a consulta: {e}")
+        
+        finally:
+            conn.close()
+
+
+
 # 🔹 Executar a inserção ao rodar o script
 if __name__ == "__main__":
-    inserir_dados_csv()
+    visualizar_dados_do_banco()
+    #inserir_dados_csv()
+    #excluir_dados_tabela()
