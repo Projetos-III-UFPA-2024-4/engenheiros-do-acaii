@@ -1,5 +1,5 @@
 // controllers/previsaoProducaoController.js
-import PrevisaoProducaoModel from "../models/previsaoProducaoModel.js";
+import PrevisaoProducaoModel from "../models/PrevisaoProducaoModel.js";
 
 const PrevisaoProducaoController = {
     async getPrevisaoProducao(req, res) {

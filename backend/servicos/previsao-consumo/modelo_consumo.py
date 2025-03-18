@@ -170,7 +170,7 @@ modelo = Prophet()
 modelo.fit(train)
 
 # Criar um dataframe com datas futuras para o período de teste
-future = modelo.make_future_dataframe(periods=len(test), freq='15T')
+future = modelo.make_future_dataframe(periods=len(test), freq='10min')
 
 # Fazer a previsão
 forecast = modelo.predict(future)
@@ -227,5 +227,106 @@ df_comparacao = pd.DataFrame({
 # Exibir as primeiras linhas do DataFrame
 df_comparacao.head()
 
-"""## Implementação do modelo ARIMA"""
+# Função para salvar previsões no banco de dados
+def salvar_previsao_no_banco(forecast_test):
+    """Insere as previsões do modelo Prophet na tabela 'previsao_consumo'."""
+    conn = get_db_connection()
+    
+    if not conn:
+        print("❌ Não foi possível conectar ao banco de dados para salvar as previsões.")
+        return
+    
+    try:
+        with conn.cursor() as cursor:
+            # Query para inserir as previsões na tabela previsao_consumo
+            query = """
+                INSERT INTO previsao_consumo (timestamp, consumo)
+                VALUES (%s, %s)
+            """
+            
+            # Itera sobre as previsões e insere no banco
+            for _, row in forecast_test.iterrows():
+                timestamp = row['ds']
+                previsao = row['yhat']
+                cursor.execute(query, (timestamp, previsao))
+            
+            # Commit para salvar as alterações no banco de dados
+            conn.commit()
+            print("✅ Previsões salvas com sucesso no banco de dados!")
+    
+    except pymysql.MySQLError as e:
+        print(f"❌ Erro ao salvar as previsões no banco de dados: {e}")
+    
+    finally:
+        conn.close()
 
+# Função para treinar, testar e prever as medições futuras
+def treinar_e_prever():
+    # Dividir os dados aleatoriamente em 80% treino e 20% teste
+    train, test = train_test_split(df, test_size=0.2)
+
+    # Ordenar os dados pelo timestamp dentro de cada conjunto para manter a coerência temporal
+    train = train.sort_values(by="ds")
+    test = test.sort_values(by="ds")
+
+    # Criar e treinar o modelo Prophet
+    modelo = Prophet()
+    modelo.fit(train)
+
+    # Criar um dataframe com datas futuras para o período de teste
+    future = modelo.make_future_dataframe(periods=len(test), freq='10min')
+
+    # Fazer a previsão
+    forecast = modelo.predict(future)
+
+    # Selecionar apenas as previsões correspondentes ao período de teste
+    forecast_test = forecast.iloc[-len(test):]
+
+    # Exibir as primeiras previsões
+    print(forecast_test[['ds', 'yhat']].head())
+
+    # Calcular as métricas de avaliação
+    test['y'] = test['y'].fillna(0)
+    nan_count = test['y'].isna().sum()
+    print(f"NaN na coluna 'y': {nan_count}")
+
+    mae = mean_absolute_error(test['y'], forecast_test['yhat'])
+    mse = mean_squared_error(test['y'], forecast_test['yhat'])
+    rmse = np.sqrt(mse)
+
+    print(f"MAE: {mae:.2f}")
+    print(f"MSE: {mse:.2f}")
+    print(f"RMSE: {rmse:.2f}")
+
+    plt.figure(figsize=(12, 6))
+    # Plotar valores reais do conjunto de teste
+    plt.plot(test['ds'], test['y'], label='Valores Reais', color='blue')
+    # Plotar previsões do modelo
+    plt.plot(forecast_test['ds'], forecast_test['yhat'], label='Previsão Prophet', color='red')
+    plt.title("Comparação: Previsões vs. Valores Reais")
+    plt.xlabel("Data")
+    plt.ylabel("Consumo Total de Energia")
+    plt.legend()
+    plt.show()
+
+    # Plotar os componentes da previsão (tendência e sazonalidade)
+    modelo.plot_components(forecast)
+    plt.show()
+
+    # Salvar as previsões no banco
+    salvar_previsao_no_banco(forecast_test)
+
+    # Agora prever as próximas medições para o próximo dia (por exemplo, usando 24 horas a mais)
+    future_next_day = modelo.make_future_dataframe(periods=24*4, freq='10min')  # 24h * 4 (a cada 15 minutos)
+    
+    # Prever as futuras medições
+    forecast_next_day = modelo.predict(future_next_day)
+
+    # Exibir as previsões do próximo dia
+    forecast_next_day[['ds', 'yhat']].tail()
+
+    # Salvar as previsões futuras no banco
+    salvar_previsao_no_banco(forecast_next_day.tail(24*4))  # Ajustar o número de previsões se necessário
+
+# Chame a função para treinar, testar e prever as medições futuras
+treinar_e_prever()
