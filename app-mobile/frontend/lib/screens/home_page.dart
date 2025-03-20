@@ -26,6 +26,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+
+  
   String selectedFilter = "Dia"; // Filtro padrão
 
   // Dados dinâmicos para os cartões e gráficos

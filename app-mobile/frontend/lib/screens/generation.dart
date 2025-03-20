@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:frontend/api/producao_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class GenerationPage extends StatefulWidget {
   const GenerationPage({super.key});
@@ -9,6 +12,33 @@ class GenerationPage extends StatefulWidget {
 }
 
 class GenerationPageState extends State<GenerationPage> {
+
+  String totalProducao = '';
+  String dataRecente = '';
+
+  @override
+  void initState() {
+    super.initState();
+    getProducaoReal();
+  }
+
+  Future<void> getProducaoReal() async {
+    final url = Uri.parse('http://localhost:5000/servicos/crud-dados/producao-real');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          totalProducao = '${data['total_geracao_mes']} kW';
+          dataRecente = data['data_mais_recente'];
+        });
+      } else {
+        print('Erro ao obter dados: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Erro: $e');
+    }
+  }
   String selectedFilter = "Dia"; // Filtro padrão
   bool showPredictions = false; // Controle da exibição das previsões
   final double valorKWh = 0.75;
@@ -76,7 +106,7 @@ class GenerationPageState extends State<GenerationPage> {
                 Expanded(
                   child: _buildInfoCard(
                     title: "Produção Atual",
-                    value: "${_getTotal(dataMap[selectedFilter]!)} kWh",
+                    value: "${totalProducao} kWh",
                     color: Colors.greenAccent,
                   ),
                 ),
