@@ -55,7 +55,7 @@ def get_db_connection():
 #     conn = get_db_connection()
 #     if conn:
 #         try:
-#             query = "SELECT hora FROM medicao_consumo;;"  # Consulta para pegar todos os dados da tabela
+#             query = "SELECT timestamp FROM medicao_consumo;;"  # Consulta para pegar todos os dados da tabela
 #             df = pd.read_sql(query, conn)  # Carregar os dados diretamente para um DataFrame
 #             print("✅ Dados carregados com sucesso do banco!")
 #             return df
@@ -82,7 +82,7 @@ def visualizar_dados_do_banco():
         with conn.cursor() as cursor:
             # Consulta SQL para pegar todas as medições
             query = """
-                SELECT id, hora, consumoTotal
+                SELECT id, timestamp, consumoTotal
                 FROM medicao_consumo;
             """
             cursor.execute(query)
@@ -141,10 +141,10 @@ data["consumoTotal"] = data["consumoTotal"].astype(float)
 data.info()
 
 # Converter a coluna 'timestamp' para formato de data
-data['hora'] = pd.to_datetime(data['hora'])
+data['timestamp'] = pd.to_datetime(data['timestamp'])
 
 # Selecionar apenas as colunas necessárias para o Prophet
-df = data[['hora', 'consumoTotal']].rename(columns={'hora': 'ds', 'consumoTotal': 'y'})
+df = data[['timestamp', 'consumoTotal']].rename(columns={'timestamp': 'ds', 'consumoTotal': 'y'})
 
 # Garantir que a série temporal tenha uma frequência uniforme
 df = df.set_index("ds").asfreq("10min").reset_index()

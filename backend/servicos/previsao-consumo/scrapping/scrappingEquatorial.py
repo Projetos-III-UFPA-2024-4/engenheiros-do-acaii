@@ -9,11 +9,11 @@ import pandas as pd
 import time
 
 # === CONFIGURAÇÕES ===
-CPF = "05795503207"  # CPF SEM PONTOS OU TRAÇOS
-DATA_NASCIMENTO = "16/05/2002"  # Data de nascimento COM BARRAS (Respeitando máscara)
-VALOR_CONTA_CONTRATO = "003025802461|2001090392"  # Insira o valor exato da conta contrato
+CPF = ""  # CPF SEM PONTOS OU TRAÇOS
+DATA_NASCIMENTO = ""  # Data de nascimento COM BARRAS (Respeitando máscara)
+VALOR_CONTA_CONTRATO = ""  # Insira o valor exato da conta contrato
 URL_SITE = "https://pa.equatorialenergia.com.br/sua-conta/historico-de-consumo/"  # URL do site
-CAMINHO_CSV = r"C:\david\engenheiros-do-acaii\backend\servicos\previsao-consumo\consumo.csv"  # Defina o caminho do CSV no seu computador
+CAMINHO_CSV = r""  # Defina o caminho do CSV no seu computador
 MODO_VISIVEL = True  # Defina como False para rodar em segundo plano
 
 # === CONFIGURAÇÃO DO DRIVER ===

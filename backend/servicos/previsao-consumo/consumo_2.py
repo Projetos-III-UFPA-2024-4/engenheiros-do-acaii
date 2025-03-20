@@ -56,7 +56,7 @@ def inserir_dados_csv():
         if conn:
             with conn.cursor() as cursor:
                 query = f"""
-                INSERT INTO `{TABLE_NAME}` (`hora`, `potA`, `potB`, `potC`, `potTotal`, `consumoTotal`)
+                INSERT INTO `{TABLE_NAME}` (`timestamp`, `potA`, `potB`, `potC`, `potTotal`, `consumoTotal`)
                 VALUES (%s, %s, %s, %s, %s, %s);
                 """
                 print(f"✅ Conectado ao banco de dados, começando a inserção...")
@@ -123,7 +123,7 @@ def visualizar_dados_do_banco():
             with conn.cursor() as cursor:
                 # Consulta SQL para pegar todas as medições
                 query = """
-                    SELECT id, hora, consumoTotal
+                    SELECT id, timestamp, consumoTotal
                     FROM medicao_consumo;
                 """
                 cursor.execute(query)
@@ -134,7 +134,7 @@ def visualizar_dados_do_banco():
                 # Imprime todas as medições
                 if todas_as_medicoes:
                     for medicao in todas_as_medicoes:
-                        print(f'ID: {medicao["id"]}, Hora: {medicao["hora"]}, Consumo Total: {medicao["consumoTotal"]}')
+                        print(f'ID: {medicao["id"]}, Timestamp: {medicao["timestamp"]}, Consumo Total: {medicao["consumoTotal"]}')
                 else:
                     print("Nenhuma medição encontrada.")
         
