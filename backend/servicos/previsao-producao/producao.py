@@ -7,7 +7,7 @@ TABLE_NAME = "medicao_producao"
 
 # 🔹 Caminho do Arquivo CSV
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = os.path.join(BASE_DIR, "dados", "15a28FevereiroEdgar.csv")
+CSV_PATH = os.path.join(BASE_DIR, "dados", "teste.csv")
 
 # 🔹 Processar e inserir os dados do CSV no banco
 def inserir_dados_csv():
