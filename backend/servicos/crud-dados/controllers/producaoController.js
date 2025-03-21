@@ -4,27 +4,34 @@ import ProducaoModel from "../models/producaoModel.js";
 const ProducaoController = {
     async getProducaoReal(req, res) {
         try {
-            // Busca os dados do model
-            const { ultimo_dia, registros } = await ProducaoModel.getUltimoMesProducao();
+            const { periodo } = req.query; // Parâmetro de filtro (diário, semanal, mensal)
+            let dadosProducao;
             
+            switch (periodo) {
+                case 'diario':
+                    dadosProducao = await ProducaoModel.getProducaoDiaria();
+                    break;
+                case 'semanal':
+                    dadosProducao = await ProducaoModel.getProducaoSemanal();
+                    break;
+                case 'mensal':
+                    dadosProducao = await ProducaoModel.getProducaoMensal();
+                    break;
+                case 'recente':
+                default:
+                    dadosProducao = await ProducaoModel.getUltimoMesProducao();
+                    break;
+            }
+
             // Verifica se os dados estão vazios
-            if (!ultimo_dia || registros.length === 0) {
+            if (!dadosProducao || dadosProducao.registros.length === 0) {
                 return res.status(404).json({ message: "Nenhum dado encontrado" });
             }
-            
-            // Somar todas as linhas da coluna "energia_solar_kw"
-            const totalProducao = registros.reduce((sum, row) => {
-                const energia = parseFloat(row["energia_solar_kw"]);
-                return isNaN(energia) ? sum : sum + energia;
-            }, 0);
-            
-            //console.log("Energia total produzida (kW):", totalProducao);
-            //console.log("Última data registrada (vinda do model):", ultimo_dia);
-            
-            // Retorna os dados no JSON
+
+            // Retorna os dados no formato JSON
             res.json({ 
-                total_geracao_mes: totalProducao, 
-                data_mais_recente: ultimo_dia 
+                ultimo_dia: dadosProducao.ultimo_dia, 
+                registros: dadosProducao.registros
             });
         } catch (error) {
             console.error("Erro no controller ao buscar produção real:", error);

@@ -53,7 +53,7 @@ def inserir_consumo_no_banco(csv_file):
 
 if __name__ == "__main__":
     # Caminho para o arquivo CSV dentro da pasta 'dados'
-    caminho_csv = "backend/servicos/previsao-consumo/dados/teste.csv"  # Este caminho deve ser relativo à pasta onde o script está
+    caminho_csv = "backend/servicos/previsao-consumo/dados/iced_potência_ativa_fev.csv"  # Este caminho deve ser relativo à pasta onde o script está
 
     # Verificar se o arquivo realmente existe
     if not os.path.isfile(caminho_csv):
