@@ -25,13 +25,19 @@ def inserir_consumo_no_banco(csv_file):
 
         # Iterar sobre as linhas do DataFrame e inserir no banco de dados
         for _, row in df.iterrows():
-            # Converter o datetime para o formato correto para MySQL
-            timestamp = pd.to_datetime(row["DateTime"]).strftime('%Y-%m-%d %H:%M:%S')
-            potA = row["FASE A"]
-            potB = row["FASE B"]
-            potC = row["FASE C"]
-            potTotal = row["TOTAL"]
-            consumoTotal = row["Consumo"]
+            # Converter o datetime para o formato correto para MySQL (ano/mês/dia)
+            # Especificando explicitamente o formato '%d/%m/%Y %H:%M:%S' para evitar ambiguidade
+            timestamp = pd.to_datetime(row["DateTime"], format='%d/%m/%Y %H:%M:%S', errors='coerce')
+            
+            # Se a data não for válida (erro no formato), substitui por None (NULL no banco de dados)
+            timestamp = timestamp.strftime('%Y-%m-%d %H:%M:%S') if pd.notnull(timestamp) else None
+
+            # Verificar e substituir valores vazios ou NaN por None
+            potA = None if pd.isnull(row["FASE A"]) else row["FASE A"]
+            potB = None if pd.isnull(row["FASE B"]) else row["FASE B"]
+            potC = None if pd.isnull(row["FASE C"]) else row["FASE C"]
+            potTotal = None if pd.isnull(row["TOTAL"]) else row["TOTAL"]
+            consumoTotal = None if pd.isnull(row["Consumo"]) else row["Consumo"]
 
             # Query para inserir os dados na tabela "medicao_consumo"
             insert_query = """
@@ -53,7 +59,7 @@ def inserir_consumo_no_banco(csv_file):
 
 if __name__ == "__main__":
     # Caminho para o arquivo CSV dentro da pasta 'dados'
-    caminho_csv = "backend\servicos\previsao-consumo\dados\\teste.csv"  # Este caminho deve ser relativo à pasta onde o script está
+    caminho_csv = "backend/servicos/previsao-consumo/dados/dataset_completo.csv"  # Este caminho deve ser relativo à pasta onde o script está
 
     # Verificar se o arquivo realmente existe
     if not os.path.isfile(caminho_csv):
