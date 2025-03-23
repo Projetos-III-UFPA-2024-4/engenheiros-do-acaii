@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/alert.dart';
+import 'package:frontend/screens/chatbot_page.dart';
 import 'package:intl/intl.dart';
+import 'package:frontend/api/dialogflow.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -10,55 +11,52 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  String _answer = ""; // Armazena a resposta
+  String _answer = ""; // Armazena a resposta do chatbot
   String _timestamp = ""; // Armazena data e hora da resposta
+  // ignore: unused_field
+  final TextEditingController _controller = TextEditingController(); // Para capturar a entrada do usuário
+  // ignore: unused_field
+  final List<Map<String, String>> _messages = []; // Armazena o histórico de mensagens
+  final DialogFlowService _dialogFlowService = DialogFlowService(); // Instância do serviço do Dialogflow
 
-  // Método para definir a resposta com base no botão clicado
-  void _showAnswer(String question) {
+  @override
+  void initState() {
+    super.initState();
+    _testDialogFlow(); // Testa a integração com o DialogFlow ao carregar a página
+  }
+
+  // Função de teste para enviar uma mensagem ao Dialogflow e imprimir a resposta
+    void _testDialogFlow() async {
+    String response = await _dialogFlowService.sendMessage("O que fazer em situação de desarme?");
+    print("Resposta do Dialogflow: $response");// Imprime a resposta no console
+
+    // Se você quiser mostrar a resposta na tela, também pode fazer isso:
+    setState(() {
+      _answer = response; // Exibe a resposta na interface
+    });
+  }
+
+  // Método para enviar a pergunta ao Dialogflow e exibir a resposta
+  // ignore: unused_element
+  void _showAnswer(String question) async {
     setState(() {
       _timestamp = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
-
-      if (question == "O que fazer em situação de desarme?") {
-        _answer =
-            "🔌 **Se o seu inversor desarmou:**\n\n"
-            "1️⃣ Verifique se há oscilações na rede elétrica.\n"
-            "2️⃣ Cheque se há mensagens de erro no display do inversor.\n"
-            "3️⃣ Reinicie o sistema desligando e religando o disjuntor.\n"
-            "4️⃣ Caso o problema persista, entre em contato com o suporte técnico.\n\n"
-            "📞 **Assistência Técnica:** 0800-123-4567 (Disponível 24h)";
-      } else if (question == "Quanto é a minha fatura atual?") {
-        _answer =
-            "💰 **Sua fatura atual** é baseada no consumo dos últimos 30 dias.\n\n"
-            "📊 Acesse o **app SmartVolt** para ver os detalhes, incluindo:\n"
-            "✔️ Histórico de consumo\n"
-            "✔️ Comparação com meses anteriores\n"
-            "✔️ Dicas para economia\n\n"
-            "📞 **Atendimento ao Cliente:** 0800-987-6543";
-      } else if (question == "Por que estou produzindo menos?") {
-        _answer =
-            "☀️ **Possíveis causas para baixa produção solar:**\n\n"
-            "🔍 **1. Painéis sujos** – Limpe os painéis regularmente.\n"
-            "🌳 **2. Sombreamento** – Verifique se há árvores ou prédios bloqueando a luz solar.\n"
-            "⚡ **3. Falha no inversor** – Verifique se o inversor está funcionando corretamente.\n\n"
-            "📞 **Suporte Técnico:** 0800-111-2222 (Horário Comercial)";
-      } else if (question == "Como otimizar meu consumo de energia?") {
-        _answer =
-            "🔋 **Dicas para otimizar seu consumo:**\n\n"
-            "💡 Substitua lâmpadas incandescentes por LED.\n"
-            "🔌 Evite deixar aparelhos em stand-by.\n"
-            "🌞 Aproveite a luz natural e desligue luzes desnecessárias.\n"
-            "❄️ Ajuste a temperatura do ar-condicionado para 23ºC.\n\n"
-            "📲 Veja mais dicas no app **SmartVolt**.";
-      } else if (question == "Quais os benefícios da energia solar?") {
-        _answer =
-            "🌞 **Vantagens da Energia Solar:**\n\n"
-            "💰 **Economia** – Redução na conta de luz.\n"
-            "🌍 **Sustentabilidade** – Energia limpa e renovável.\n"
-            "⚡ **Autonomia** – Menos dependência da rede elétrica.\n"
-            "📈 **Valorização** – Seu imóvel pode valer mais no mercado.\n\n"
-            "📲 Saiba mais no site oficial do SmartVolt.";
-      }
     });
+
+    try {
+      // Envia a pergunta ao Dialogflow
+      String response = await _dialogFlowService.sendMessage(question);
+
+      // Atualiza a resposta na interface
+      setState(() {
+        _answer = response;
+      });
+    } catch (e) {
+      // Em caso de erro, exibe uma mensagem de erro
+      setState(() {
+        _answer = "Erro na comunicação com o Dialogflow: $e";
+      });
+    }
   }
 
   @override
@@ -163,50 +161,51 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  // Método para criar botões estilizados como cartões
-  Widget _buildQuestionCard(String question, IconData icon) {
-    return GestureDetector(
-      onTap: () {
-        _showAnswer(question);
-        // Aqui, ao tocar no cartão, você pode navegar para outra página, por exemplo, Alertas
-        //  pode usar o Navigator.pushNamed() para navegar para outra tela:
-        // Navigator.pushNamed(context, '/alerts');
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              blurRadius: 5,
-              spreadRadius: 2,
-            ),
-          ],
+Widget _buildQuestionCard(String question, IconData icon) {
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatBotPage(initialMessage: question,), // Passa a pergunta como mensagem inicial
         ),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.purple, size: 28),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                question,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+      );
+    },
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            blurRadius: 5,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.purple, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              question,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.black45,
-              size: 18,
-            ),
-          ],
-        ),
+          ),
+          const Icon(
+            Icons.arrow_forward_ios,
+            color: Colors.black45,
+            size: 18,
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
