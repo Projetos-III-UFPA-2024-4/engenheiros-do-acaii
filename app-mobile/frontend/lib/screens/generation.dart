@@ -140,7 +140,7 @@ class GenerationPageState extends State<GenerationPage> {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(),
             blurRadius: 8,
             spreadRadius: 2,
           ),

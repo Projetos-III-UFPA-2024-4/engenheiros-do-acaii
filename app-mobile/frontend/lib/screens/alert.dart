@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'chat.dart'; // Importe a página de chat
+import 'chatbot_page.dart'; // Importe a página de chat
 
 class AlertsPage extends StatelessWidget {
   const AlertsPage({super.key});
@@ -113,7 +113,7 @@ class AlertsPage extends StatelessWidget {
                   // Redireciona para a página de chat (mantém a navegação na pilha)
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const ChatPage()),
+                    MaterialPageRoute(builder: (context) => const ChatBotPage()),
                   );
                 },
                 child: const Text(

@@ -129,7 +129,7 @@ class ConsumptionPageState extends State<ConsumptionPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(),
             blurRadius: 5,
             spreadRadius: 2,
           ),
@@ -195,7 +195,7 @@ class ConsumptionPageState extends State<ConsumptionPage> {
               },
               getDrawingVerticalLine: (value) {
                 return FlLine(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: Colors.grey.withValues(),
                   strokeWidth: 1,
                   dashArray: [5, 5],
                 );

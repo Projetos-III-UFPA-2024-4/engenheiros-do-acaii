@@ -7,7 +7,7 @@ class DialogFlowService {
   final String _projectId = 'chatbot-smartvolt-sij9'; // Substitua pelo ID do seu projeto
   final String _sessionId = Uuid().v4(); // Pode ser dinâmico
   final String _languageCode = 'pt-BR';
-  final String _credentialsPath = 'assets/credentials/chatbot-smartvolt-sij9-3fa4f8a3caed.json';
+  final String _credentialsPath = 'assets/credentials/chatbot-smartvolt-sij9-cca54af4ec1f.json';
 
   Future<String> sendMessage(String message) async {
     try {

@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/chatbot_page.dart';
 import 'package:intl/intl.dart';
@@ -31,9 +33,9 @@ class _ChatPageState extends State<ChatPage> {
     print("Resposta do Dialogflow: $response");// Imprime a resposta no console
 
     // Se você quiser mostrar a resposta na tela, também pode fazer isso:
-    setState(() {
-      _answer = response; // Exibe a resposta na interface
-    });
+    //setState(() {
+    //  _answer = response; // Exibe a resposta na interface
+   // });
   }
 
   // Método para enviar a pergunta ao Dialogflow e exibir a resposta
@@ -127,7 +129,7 @@ class _ChatPageState extends State<ChatPage> {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
+                        color: Colors.grey.withValues(),
                         blurRadius: 5,
                         spreadRadius: 2,
                       ),
@@ -179,7 +181,7 @@ Widget _buildQuestionCard(String question, IconData icon) {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(),
             blurRadius: 5,
             spreadRadius: 2,
           ),

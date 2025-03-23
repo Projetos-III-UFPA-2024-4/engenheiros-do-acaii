@@ -43,4 +43,5 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-/app-mobile/frontend/assets/credentials/chatbot-smartvolt-sij9-3fa4f8a3caed.json
+
+/assets/credentials/chatbot-smartvolt-sij9-cca54af4ec1f.json
