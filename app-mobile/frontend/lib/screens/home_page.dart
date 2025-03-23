@@ -39,40 +39,46 @@ class _HomePageState extends State<HomePage> {
   List<double> realGenerationData = [];
   List<double> predictedConsumptionData = [];
   List<double> predictedGenerationData = [];
-  
+
   // Variável para armazenar o total de produção
   double totalProduction = 0.0;
-  bool isConsumption = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchData('diario'); // Carregar dados iniciais (diário)
+    _fetchData();
+  }
+
+  String _getApiPeriodo(String filter) {
+    switch (filter) {
+      case "Dia":
+        return "diario";
+      case "Semana":
+        return "semanal";
+      case "Mês":
+        return "mensal";
+      default:
+        return "recente";
+    }
   }
 
   // Método para fazer a requisição e carregar os dados da API
-  Future<void> _fetchData(String periodo) async {
+  Future<void> _fetchData() async {
     setState(() {
       isLoading = true;
     });
 
     try {
-      // Requisição para consumo real
+      final periodo = _getApiPeriodo(selectedFilter);
       final consumptionResponse = await http.get(
         Uri.parse('http://localhost:5000/servicos/crud-dados/consumo-real?periodo=$periodo'),
       );
-
-      // Requisição para produção real
       final generationResponse = await http.get(
         Uri.parse('http://localhost:5000/servicos/crud-dados/producao-real?periodo=$periodo'),
       );
-
-      // Requisição para previsão de consumo
       final predictedConsumptionResponse = await http.get(
         Uri.parse('http://localhost:5000/servicos/crud-dados/previsao-consumo?periodo=$periodo'),
       );
-
-      // Requisição para previsão de produção
       final predictedGenerationResponse = await http.get(
         Uri.parse('http://localhost:5000/servicos/crud-dados/previsao-producao?periodo=$periodo'),
       );
@@ -86,45 +92,19 @@ class _HomePageState extends State<HomePage> {
         final predictedConsumptionDataJson = jsonDecode(predictedConsumptionResponse.body);
         final predictedGenerationDataJson = jsonDecode(predictedGenerationResponse.body);
 
-        // Verifique se a chave 'registros' existe e tem dados
-        if (consumptionDataJson['registros'] != null &&
-            consumptionDataJson['registros'].isNotEmpty &&
-            generationDataJson['registros'] != null &&
-            generationDataJson['registros'].isNotEmpty &&
-            predictedConsumptionDataJson['registros'] != null &&
-            predictedConsumptionDataJson['registros'].isNotEmpty &&
-            predictedGenerationDataJson['registros'] != null &&
-            predictedGenerationDataJson['registros'].isNotEmpty) {
-          setState(() {
-            // Pegar os dados reais de consumo e geração
-           realConsumptionData = _aggregateDataByHour(consumptionDataJson['registros'], 'consumoTotal', isConsumption: true);
-realGenerationData = _aggregateDataByHour(generationDataJson['registros'], 'energia_solar_kw', isConsumption: false);
+        setState(() {
+          realConsumptionData = _aggregateDataByHour(consumptionDataJson['registros'] ?? [], 'consumoTotal', isConsumption: true);
+          realGenerationData = _aggregateDataByHour(generationDataJson['registros'] ?? [], 'energia_solar_kw', isConsumption: false);
+          predictedConsumptionData = _aggregateDataByHour(predictedConsumptionDataJson['registros'] ?? [], 'consumo', isConsumption: true);
+          predictedGenerationData = _aggregateDataByHour(predictedGenerationDataJson['registros'] ?? [], 'geracao (kwh)', isConsumption: false);
 
-// Pegar os dados previstos de consumo e geração
-predictedConsumptionData = _aggregateDataByHour(predictedConsumptionDataJson['registros'], 'consumo', isConsumption: true);
-predictedGenerationData = _aggregateDataByHour(predictedGenerationDataJson['registros'], 'geracao (kwh)', isConsumption: false);
-
-            // Calcular a produção total
-            totalProduction = realGenerationData.fold(0.0, (sum, value) => sum + value);
-          });
-        }
+          totalProduction = realGenerationData.fold(0.0, (sum, value) => sum + value);
+        });
       } else {
         print("Erro ao carregar dados: ${consumptionResponse.statusCode}, ${generationResponse.statusCode}");
-        setState(() {
-          realConsumptionData = [];
-          realGenerationData = [];
-          predictedConsumptionData = [];
-          predictedGenerationData = [];
-        });
       }
     } catch (e) {
       print("Erro na requisição: $e");
-      setState(() {
-        realConsumptionData = [];
-        realGenerationData = [];
-        predictedConsumptionData = [];
-        predictedGenerationData = [];
-      });
     } finally {
       setState(() {
         isLoading = false;
@@ -132,181 +112,178 @@ predictedGenerationData = _aggregateDataByHour(predictedGenerationDataJson['regi
     }
   }
 
-  // Função para agrupar os dados por hora e converter de Wh para kWh
+  // Função para converter de Wh para kWh (se necessário) e retornar os valores
   List<double> _aggregateDataByHour(List<dynamic> registros, String columnName, {bool isConsumption = false}) {
-  List<double> hourlyData = List.filled(24, 0.0); // Inicializa uma lista com 24 horas
+    List<double> values = [];
 
-  for (var registro in registros) {
-    DateTime time;
+    for (var registro in registros) {
+      // Se o valor for nulo, considere como 0
+      double value = registro[columnName] != null ? (registro[columnName] as num).toDouble() : 0.0;
 
-    // Verificando se 'tempo' (para produção real) ou 'timestamp' (para os outros) não é nulo antes de tentar converter
-    try {
-      if (registro['tempo'] != null) {
-        time = DateTime.parse(registro['tempo']); // Para a produção real
-      } else if (registro['timestamp'] != null) {
-        time = DateTime.parse(registro['timestamp']); // Para os outros dados
-      } else {
-        continue; // Se o timestamp/tempo for nulo, pula o registro
-      }
-    } catch (e) {
-      print("Erro ao parsear o tempo/timestamp: $e");
-      continue; // Pula o registro se ocorrer erro ao converter o timestamp
-    }
-
-    int hour = time.hour;
-
-    // Se o valor for válido, acumule na hora correspondente
-    if (registro[columnName] != null) {
-      double value = (registro[columnName] as num).toDouble();
-      
       // Se for consumo, converta de Wh para kWh
       if (isConsumption) {
-        value /= 1000; // Converte de Wh para kWh apenas para consumo
+        value /= 1000; // Converte de Wh para kWh
       }
 
-      // Acumule o valor na hora correspondente
-      hourlyData[hour] += value;
+      // Adiciona o valor à lista
+      values.add(value);
     }
-  }
-  return hourlyData;
-}
 
-  // Função para atualizar o filtro e recarregar os dados
-  void _onFilterChanged(String filter) {
-    setState(() {
-      selectedFilter = filter;
-    });
-    String periodo = '';
-    if (filter == "Dia") periodo = 'diario';
-    else if (filter == "Semana") periodo = 'semanal';
-    else if (filter == "Mês") periodo = 'mensal';
-
-    _fetchData(periodo);
+    return values;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[200],
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Seletor de período
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildFilterButton("Dia"),
-                  _buildFilterButton("Semana"),
-                  _buildFilterButton("Mês"),
-                ],
-              ),
+   @override
+Widget build(BuildContext context) {
+  // Dados agregados para os cartões
+  double consumoReal = realConsumptionData.isNotEmpty ? realConsumptionData.reduce((sum, value) => sum + value) : 0.0;
+  double geracaoReal = realGenerationData.isNotEmpty ? realGenerationData.reduce((sum, value) => sum + value) : 0.0;
+  double previsaoConsumo = predictedConsumptionData.isNotEmpty ? predictedConsumptionData.reduce((sum, value) => sum + value) : 0.0;
+  double previsaoGeracao = predictedGenerationData.isNotEmpty ? predictedGenerationData.reduce((sum, value) => sum + value) : 0.0;
 
-              const SizedBox(height: 20),
+  // Cálculo do valor estimado da fatura (consumo real - produção real)
+  double diferencaConsumoProducao = consumoReal - geracaoReal;
+  double valorEstimadoFatura = diferencaConsumoProducao * kWhRate;
 
-              // Cartões de Consumo e Produção com valores dinâmicos
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildCard(
-                      icon: Icons.flash_on,
-                      title: "Consumo",
-                      value: "${realConsumptionData.isNotEmpty ? realConsumptionData[0] : 0.0} kWh",
-                      price:
-                          "R\$ ${(realConsumptionData.isNotEmpty ? realConsumptionData[0] : 0.0) * kWhRate}",
-                      color: Colors.orange,
-                    ),
+  // Se a produção for maior que o consumo, o valor da fatura é zero
+  if (diferencaConsumoProducao < 0) {
+    diferencaConsumoProducao = 0.0;
+    valorEstimadoFatura = 0.0;
+  }
+
+  // Texto dinâmico para o cartão de estimativa da fatura
+  String textoFatura;
+  switch (selectedFilter) {
+    case "Dia":
+      textoFatura = "Valor estimado da fatura de hoje";
+      break;
+    case "Semana":
+      textoFatura = "Valor estimado da fatura dos últimos 7 dias";
+      break;
+    case "Mês":
+      textoFatura = "Valor estimado da fatura deste mês";
+      break;
+    default:
+      textoFatura = "Valor estimado da próxima fatura";
+  }
+
+  return Scaffold(
+    backgroundColor: Colors.grey[200],
+    body: SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Seletor de período
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildFilterButton("Dia"),
+                _buildFilterButton("Semana"),
+                _buildFilterButton("Mês"),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Cartões de Consumo e Produção com valores dinâmicos
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCard(
+                    icon: Icons.flash_on,
+                    title: "Consumo",
+                    value: "${consumoReal.toStringAsFixed(2)} kWh", // Duas casas decimais
+                    price: "R\$ ${(consumoReal * kWhRate).toStringAsFixed(2)}", // Duas casas decimais
+                    color: Colors.orange,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildCard(
-                      icon: Icons.wb_sunny,
-                      title: "Produção",
-                      value: "${totalProduction} kWh",  // Exibe o total de produção
-                      price:
-                          "R\$ ${totalProduction * kWhRate}",
-                      color: Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              // Cartão de Estimativa de Fatura com valores dinâmicos
-              _buildCard(
-                icon: Icons.attach_money,
-                title: "Valor estimado da próxima fatura",
-                value: "${realConsumptionData.isNotEmpty ? realConsumptionData[0] : 0.0} kWh",
-                price: "R\$ ${((predictedGenerationData.isNotEmpty ? predictedGenerationData[0] : 0.0) - (predictedConsumptionData.isNotEmpty ? predictedConsumptionData[0] : 0.0)) * kWhRate}",
-                color: Colors.purple,
-                fullWidth: true,
-              ),
-
-              const SizedBox(height: 20),
-
-              // Gráficos Comparativos (lado a lado)
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildComparisonCard(
-                      title: "Consumo vs Geração (Real)",
-                      data: {
-                        "Dia": [realConsumptionData[0], realGenerationData[0]],
-                        "Semana": [realConsumptionData[1], realGenerationData[1]],
-                        "Mês": [realConsumptionData[2], realGenerationData[2]],
-                      },
-                      color1: const Color.fromRGBO(255, 152, 0, 1),
-                      color2: Colors.purple,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildComparisonCard(
-                      title: "Consumo vs Geração (Previsto)",
-                      data: {
-                        "Dia": [predictedConsumptionData[0], predictedGenerationData[0]],
-                        "Semana": [predictedConsumptionData[1], predictedGenerationData[1]],
-                        "Mês": [predictedConsumptionData[2], predictedGenerationData[2]],
-                      },
-                      color1: Colors.orange,
-                      color2: Colors.purple,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Alerta de Produção
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.yellow.shade100,
-                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning, color: Colors.orange, size: 30),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: const Text(
-                        "Atenção! Você está produzindo menos que o esperado. Avalie economizar!",
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildCard(
+                    icon: Icons.wb_sunny,
+                    title: "Produção",
+                    value: "${geracaoReal.toStringAsFixed(2)} kWh", // Duas casas decimais
+                    price: "R\$ ${(geracaoReal * kWhRate).toStringAsFixed(2)}", // Duas casas decimais
+                    color: Colors.orange,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            // Cartão de Estimativa de Fatura com valores dinâmicos
+            _buildCard(
+              icon: Icons.attach_money,
+              title: textoFatura, // Texto dinâmico
+              value: "${diferencaConsumoProducao.toStringAsFixed(2)} kWh", // Diferença entre consumo e produção
+              price: "R\$ ${valorEstimadoFatura.toStringAsFixed(2)}", // Valor estimado da fatura
+              color: Colors.purple,
+              fullWidth: true,
+            ),
+
+            const SizedBox(height: 20),
+
+            // Gráficos Comparativos (lado a lado)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildComparisonCard(
+                    title: "Consumo vs Geração (Real)",
+                    data: {
+                      "Dia": [consumoReal, geracaoReal],
+                      "Semana": [consumoReal, geracaoReal],
+                      "Mês": [consumoReal, geracaoReal],
+                    },
+                    color1: const Color.fromRGBO(255, 152, 0, 1),
+                    color2: Colors.purple,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildComparisonCard(
+                    title: "Consumo vs Geração (Previsto)",
+                    data: {
+                      "Dia": [previsaoConsumo, previsaoGeracao],
+                      "Semana": [previsaoConsumo, previsaoGeracao],
+                      "Mês": [previsaoConsumo, previsaoGeracao],
+                    },
+                    color1: Colors.orange,
+                    color2: Colors.purple,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // // Alerta de Produção
+            // Container(
+            //   padding: const EdgeInsets.all(16),
+            //   decoration: BoxDecoration(
+            //     color: Colors.yellow.shade100,
+            //     borderRadius: BorderRadius.circular(10),
+            //   ),
+            //   child: Row(
+            //     children: [
+            //       const Icon(Icons.warning, color: Colors.orange, size: 30),
+            //       const SizedBox(width: 10),
+            //       Expanded(
+            //         child: const Text(
+            //           "Atenção! Você está produzindo menos que o esperado. Avalie economizar!",
+            //           style: TextStyle(fontSize: 16),
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
+          ],
         ),
       ),
-    );
-  }
-
+    ),
+  );
+}
   // Criar os botões de filtro
   Widget _buildFilterButton(String filter) {
     return GestureDetector(
@@ -314,6 +291,7 @@ predictedGenerationData = _aggregateDataByHour(predictedGenerationDataJson['regi
         setState(() {
           selectedFilter = filter;
         });
+        _fetchData(); // Recarrega os dados ao mudar o filtro
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -453,13 +431,13 @@ predictedGenerationData = _aggregateDataByHour(predictedGenerationDataJson['regi
     Color color1,
     Color color2,
   ) {
-    List<double> values = data[selectedFilter]!;
+    List<double> values = data[selectedFilter] ?? [0.0, 0.0]; // Use valores padrão se o filtro não estiver presente
     return [
       BarChartGroupData(
         x: 0,
         barRods: [
           BarChartRodData(
-            toY: values[0],
+            toY: values.isNotEmpty ? values[0] : 0.0, // Verifica se há dados
             color: color1,
             width: 40,
             borderRadius: BorderRadius.circular(2),
@@ -470,7 +448,7 @@ predictedGenerationData = _aggregateDataByHour(predictedGenerationDataJson['regi
         x: 1,
         barRods: [
           BarChartRodData(
-            toY: values[1],
+            toY: values.length > 1 ? values[1] : 0.0, // Verifica se há dados
             color: color2,
             width: 40,
             borderRadius: BorderRadius.circular(2),

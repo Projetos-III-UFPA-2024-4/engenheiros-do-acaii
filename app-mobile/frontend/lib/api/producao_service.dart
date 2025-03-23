@@ -6,7 +6,7 @@ class ProducaoService {
 
   // Chama o endpoint de produção, passando o parâmetro de período
   static Future<Map<String, dynamic>> getProducaoReal(String periodo) async {
-    final url = Uri.parse('$baseUrl/producao-real?periodo=$periodo');
+    final url = Uri.parse('$baseUrl/producao-real');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -16,7 +16,7 @@ class ProducaoService {
   }
 
   // Chama o endpoint de previsão
-  static Future<Map<String, dynamic>> getPrevisaoProducao() async {
+  static Future<Map<String, dynamic>> getPrevisaoProducao(String periodo) async {
     final url = Uri.parse('$baseUrl/previsao-producao');
     final response = await http.get(url);
     if (response.statusCode == 200) {

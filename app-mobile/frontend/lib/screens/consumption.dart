@@ -1,80 +1,111 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:frontend/api/consumo_service.dart';
+
+/// Modelo para representar cada registro de consumo
+class RegistroConsumo {
+  final double kw;
+  final DateTime tempo;
+
+  RegistroConsumo({required this.kw, required this.tempo});
+}
 
 class ConsumptionPage extends StatefulWidget {
-  const ConsumptionPage({super.key});
+  const ConsumptionPage({Key? key}) : super(key: key);
 
   @override
   ConsumptionPageState createState() => ConsumptionPageState();
 }
 
 class ConsumptionPageState extends State<ConsumptionPage> {
-  String selectedFilter = "Dia"; // Filtro padrão
+  String selectedFilter = "Dia";
   bool isLoading = false;
-  List<double> consumptionData = [];
-  List<double> generationData = [];
-  List<double> savingsData = [];
+
+  /// Lista dos registros retornados pela API
+  List<RegistroConsumo> _listaConsumo = [];
+
+  /// Dados agregados para o gráfico de linha
+  List<double> aggregatedData = [];
+
+  /// Rótulos para o eixo X do gráfico
+  List<String> xLabels = [];
+
+  /// Total previsto retornado pela API de previsão (usado no card)
+  double _forecastTotal = 0.0;
+
+  /// Valor (em R$) por kWh
+  final double valorKWh = 0.938;
+
+  /// Dados reais para o segundo gráfico (últimos 15 dias)
+  List<double> realDataSecondChart = [];
+
+  /// Dados previstos para o segundo gráfico (próximos 15 dias)
+  List<double> forecastDataSecondChart = [];
+
+  /// Rótulos para o eixo X do segundo gráfico
+  List<String> xLabelsSecondChart = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchData('diario'); // Carregar dados iniciais (diário)
+    _fetchData();
   }
 
-  // Método para fazer a requisição e carregar os dados da API
-  Future<void> _fetchData(String periodo) async {
+  /// Converte o filtro para o parâmetro esperado pela API
+  String _getApiPeriodo(String filter) {
+    switch (filter) {
+      case "Dia":
+        return "diario";
+      case "Semana":
+        return "semanal";
+      case "Mês":
+        return "mensal";
+      default:
+        return "recente";
+    }
+  }
+
+  /// Busca os dados de consumo e, se aplicável, os dados de previsão
+  Future<void> _fetchData() async {
     setState(() {
       isLoading = true;
     });
-
     try {
-      // Requisição para consumo
-      final consumptionResponse = await http.get(
-        Uri.parse('http://localhost:5000/servicos/crud-dados/consumo-real?periodo=$periodo'),
-      );
+      final periodo = _getApiPeriodo(selectedFilter);
+      final response = await ConsumoService.getConsumoReal(periodo);
+      final registros = response["registros"] ?? [];
 
-      // Requisição para geração
-      final generationResponse = await http.get(
-        Uri.parse('http://localhost:5000/servicos/crud-dados/producao-real?periodo=$periodo'),
-      );
+      // Converte os registros em objetos RegistroConsumo e divide por 1000 para converter Wh para kWh
+      List<RegistroConsumo> lista = registros.map<RegistroConsumo>((item) {
+        final kw = (item["consumoTotal"] ?? 0.0) / 1000; // Divide por 1000
+        final tempoStr = item["timestamp"] ?? "";
+        DateTime tempo = DateTime.tryParse(tempoStr) ?? DateTime.now();
+        return RegistroConsumo(kw: (kw as num).toDouble(), tempo: tempo);
+      }).toList();
 
-      if (consumptionResponse.statusCode == 200 && generationResponse.statusCode == 200) {
-        final consumptionDataJson = jsonDecode(consumptionResponse.body);
-        final generationDataJson = jsonDecode(generationResponse.body);
+      final response2 = await ConsumoService.getPrevisaoConsumo(periodo);
+      final registros2 = response2["registros"] ?? [];
 
-        // Verifique se a chave 'registros' existe e tem dados para consumo e geração
-        if (consumptionDataJson['registros'] != null && consumptionDataJson['registros'].isNotEmpty &&
-            generationDataJson['registros'] != null && generationDataJson['registros'].isNotEmpty) {
-          setState(() {
-            // Acumular os dados por hora para consumo e geração
-            consumptionData = _aggregateDataByHour(consumptionDataJson['registros'], 'consumoTotal');
-            generationData = _aggregateDataByHour(generationDataJson['registros'], 'energia_solar_kw'); // Coluna de geração
-            savingsData = _calculateSavings(consumptionData, generationData); // Calculando economia (geração - consumo)
-          });
-        } else {
-          setState(() {
-            consumptionData = [];
-            generationData = [];
-            savingsData = [];
-          });
-        }
-      } else {
-        print("Erro ao carregar dados: ${consumptionResponse.statusCode}, ${generationResponse.statusCode}");
-        setState(() {
-          consumptionData = [];
-          generationData = [];
-          savingsData = [];
-        });
-      }
-    } catch (e) {
-      print("Erro na requisição: $e");
+      // Converte os registros de previsão em objetos RegistroConsumo e divide por 1000 para converter Wh para kWh
+      List<RegistroConsumo> listaPrevisao = registros2.map<RegistroConsumo>((item) {
+        final kw = (item["consumo"] ?? 0.0) / 1000; // Divide por 1000
+        final tempoStr = item["timestamp"] ?? "";
+        DateTime tempo = DateTime.tryParse(tempoStr) ?? DateTime.now();
+        return RegistroConsumo(kw: (kw as num).toDouble(), tempo: tempo);
+      }).toList();
+
+      // Calcula o total de previsão
+      double forecastTotal = listaPrevisao.fold(0.0, (sum, item) => sum + item.kw);
+
       setState(() {
-        consumptionData = [];
-        generationData = [];
-        savingsData = [];
+        _listaConsumo = lista;
+        _forecastTotal = forecastTotal;
       });
+
+      _aggregateData();
+    } catch (e) {
+      print("Erro ao buscar dados: $e");
     } finally {
       setState(() {
         isLoading = false;
@@ -82,127 +113,171 @@ class ConsumptionPageState extends State<ConsumptionPage> {
     }
   }
 
-  // Função para agrupar os dados por hora e converter de Wh para kWh
-  List<double> _aggregateDataByHour(List<dynamic> registros, String columnName) {
-    List<double> hourlyData = List.filled(24, 0.0); // Inicializa uma lista com 24 horas
+  /// Agrega os dados de consumo com base na última medição.
+  /// - "Dia": As 24 horas anteriores à última medição.
+  /// - "Semana": Os 7 dias anteriores à data da última medição.
+  /// - "Mês": Os 30 dias anteriores à data da última medição.
+  void _aggregateData() {
+    if (_listaConsumo.isEmpty) {
+      setState(() {
+        aggregatedData = [];
+        xLabels = [];
+        realDataSecondChart = [];
+        forecastDataSecondChart = [];
+        xLabelsSecondChart = [];
+      });
+      return;
+    }
 
-    for (var registro in registros) {
-      DateTime time;
-      
-      // Verificando se 'timestamp' não é nulo antes de tentar converter
-      if (registro['timestamp'] != null) {
-        time = DateTime.parse(registro['timestamp']); // Converte apenas se não for nulo
-      } else {
-        continue; // Se o timestamp for nulo, pula o registro
+    // Determina a última medição
+    DateTime lastMeasurement = _listaConsumo.reduce(
+      (a, b) => a.tempo.isAfter(b.tempo) ? a : b,
+    ).tempo;
+
+    if (selectedFilter == "Dia") {
+      // Define o início como a última medição menos 23 horas
+      DateTime startTime = lastMeasurement.subtract(Duration(hours: 23));
+      List<double> data = [];
+      List<String> labels = [];
+
+      // Itera sobre as 24 horas a partir do startTime
+      for (int i = 0; i < 24; i++) {
+        DateTime intervalStart = startTime.add(Duration(hours: i));
+        DateTime intervalEnd = startTime.add(Duration(hours: i + 1));
+        double sum = 0.0;
+
+        // Soma os valores dentro do intervalo de hora
+        for (var reg in _listaConsumo) {
+          if ((reg.tempo.isAtSameMomentAs(intervalStart) ||
+                  reg.tempo.isAfter(intervalStart)) &&
+              reg.tempo.isBefore(intervalEnd)) {
+            sum += reg.kw;
+          }
+        }
+
+        // Adiciona apenas se houver dados no intervalo
+        if (sum > 0) {
+          data.add(sum);
+          labels.add(DateFormat('HH:mm').format(intervalStart));
+        }
       }
 
-      int hour = time.hour;
+      setState(() {
+        aggregatedData = data;
+        xLabels = labels;
+      });
+    } else if (selectedFilter == "Semana") {
+      DateTime lastDate = DateTime(lastMeasurement.year, lastMeasurement.month,
+          lastMeasurement.day);
+      DateTime startDate = lastDate.subtract(Duration(days: 6));
+      List<double> data = List.filled(7, 0.0);
+      List<String> labels = [];
 
-      // Se o valor for válido, acumule na hora correspondente e converta para kWh
-      if (registro[columnName] != null) {
-        hourlyData[hour] += (registro[columnName] as num).toDouble() / 1000; // Dividido por 1000 para converter Wh para kWh
+      for (int i = 0; i < 7; i++) {
+        DateTime day = startDate.add(Duration(days: i));
+        double sum = 0.0;
+        for (var reg in _listaConsumo) {
+          DateTime regDate = DateTime(
+              reg.tempo.year, reg.tempo.month, reg.tempo.day);
+          if (regDate == day) {
+            sum += reg.kw;
+          }
+        }
+        data[i] = sum;
+        labels.add(DateFormat('EEE dd').format(day));
       }
+      setState(() {
+        aggregatedData = data;
+        xLabels = labels;
+      });
+    } else if (selectedFilter == "Mês") {
+      // Define o início como o primeiro dia do mês da última medição
+      DateTime startDate = DateTime(lastMeasurement.year, lastMeasurement.month, 1);
+      // Define o fim como o último dia do mês da última medição
+      DateTime endDate = DateTime(lastMeasurement.year, lastMeasurement.month + 1, 0);
+      int daysInMonth = endDate.day;
+
+      List<double> data = List.filled(daysInMonth, 0.0);
+      List<String> labels = [];
+
+      for (int i = 0; i < daysInMonth; i++) {
+        DateTime day = startDate.add(Duration(days: i));
+        double sum = 0.0;
+        for (var reg in _listaConsumo) {
+          DateTime regDate =
+              DateTime(reg.tempo.year, reg.tempo.month, reg.tempo.day);
+          if (regDate == day) {
+            sum += reg.kw;
+          }
+        }
+        data[i] = sum;
+        labels.add(DateFormat('dd/MM').format(day));
+      }
+      setState(() {
+        aggregatedData = data;
+        xLabels = labels;
+      });
     }
-    return hourlyData;
+
+    // Prepara os dados para o segundo gráfico
+    _prepareSecondChartData(lastMeasurement);
   }
 
-  // Função para calcular a economia como diferença entre geração e consumo
-  List<double> _calculateSavings(List<double> consumption, List<double> generation) {
-    List<double> savings = [];
-    for (int i = 0; i < 24; i++) {
-      savings.add(generation[i] - consumption[i]); // Economia = Geração - Consumo
+  /// Prepara os dados para o segundo gráfico
+  void _prepareSecondChartData(DateTime lastMeasurement) {
+    // Limpa os dados anteriores
+    realDataSecondChart.clear();
+    forecastDataSecondChart.clear();
+    xLabelsSecondChart.clear();
+
+    // Coleta os últimos 15 dias reais
+    DateTime startDate = lastMeasurement.subtract(Duration(days: 14));
+    for (int i = 0; i < 15; i++) {
+      DateTime day = startDate.add(Duration(days: i));
+      double sum = 0.0;
+
+      // Soma os valores reais para o dia
+      for (var reg in _listaConsumo) {
+        DateTime regDate = DateTime(reg.tempo.year, reg.tempo.month, reg.tempo.day);
+        if (regDate == day) {
+          sum += reg.kw;
+        }
+      }
+
+      realDataSecondChart.add(sum);
+      xLabelsSecondChart.add(DateFormat('dd/MM').format(day));
     }
-    return savings;
+
+    // Coleta as previsões para os próximos 15 dias
+    DateTime forecastStartDate = lastMeasurement.add(Duration(days: 1));
+    for (int i = 0; i < 15; i++) {
+      DateTime day = forecastStartDate.add(Duration(days: i));
+      double sum = 0.0;
+
+      // Soma os valores previstos para o dia
+      for (var reg in _listaConsumo) {
+        DateTime regDate = DateTime(reg.tempo.year, reg.tempo.month, reg.tempo.day);
+        if (regDate == day) {
+          sum += reg.kw;
+        }
+      }
+
+      forecastDataSecondChart.add(sum);
+      xLabelsSecondChart.add(DateFormat('dd/MM').format(day));
+    }
+
+    setState(() {});
   }
 
-  // Função para atualizar o filtro e recarregar os dados
-  void _onFilterChanged(String filter) {
-    setState(() {
-      selectedFilter = filter;
-    });
-    String periodo = '';
-    if (filter == "Dia") periodo = 'diario';
-    else if (filter == "Semana") periodo = 'semanal';
-    else if (filter == "Mês") periodo = 'mensal';
-
-    _fetchData(periodo);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[200],
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          "Consumo de Energia",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Filtros para o gráfico
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildFilterButton("Dia"),
-                      _buildFilterButton("Semana"),
-                      _buildFilterButton("Mês"),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Cartões informativos
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildInfoCard(
-                          title: "Consumo Total",
-                          value: _getTotal(consumptionData) == 0.0
-                              ? "Sem dados"
-                              : "${_getTotal(consumptionData)} kWh",
-                          color: Colors.redAccent,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildInfoCard(
-                          title: "Economia",
-                          value: _getTotal(savingsData) == 0.0
-                              ? "Sem dados"
-                              : "${_getTotal(savingsData)} kWh",
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Gráfico de Barras - Consumo e Economia
-                  const Text(
-                    "Consumo vs Economia de Energia",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  Expanded(child: _buildResponsiveBarChart()),
-                ],
-              ),
-            ),
-    );
-  }
-
-  // Criar os botões de filtro
+  /// Constrói um botão para seleção do filtro
   Widget _buildFilterButton(String filter) {
     return GestureDetector(
-      onTap: () => _onFilterChanged(filter),
+      onTap: () {
+        setState(() {
+          selectedFilter = filter;
+        });
+        _fetchData();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
@@ -221,7 +296,56 @@ class ConsumptionPageState extends State<ConsumptionPage> {
     );
   }
 
-  // Criar os cartões informativos
+  /// Card de gastos estimados com base no consumo total
+  Widget _buildGainsCard() {
+    double totalConsumption = aggregatedData.fold(0.0, (soma, valor) => soma + valor);
+    double gastos = totalConsumption * valorKWh;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              spreadRadius: 2)
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.attach_money, size: 40, color: Colors.white),
+          const SizedBox(width: 15),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Gastos Estimados",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                "R\$ ${gastos.toStringAsFixed(2)}",
+                style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
+              ),
+              Text(
+                "Com base em ${totalConsumption.toStringAsFixed(1)} kWh consumidos",
+                style: const TextStyle(fontSize: 14, color: Colors.white70),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Card informativo genérico (para consumo atual e previsão)
   Widget _buildInfoCard({
     required String title,
     required String value,
@@ -234,122 +358,240 @@ class ConsumptionPageState extends State<ConsumptionPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            blurRadius: 5,
-            spreadRadius: 2,
-          ),
+              color: Colors.grey.withOpacity(0.2),
+              blurRadius: 5,
+              spreadRadius: 2)
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 5),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              color: color,
-              fontWeight: FontWeight.bold,
+          Text(value,
+              style: TextStyle(
+                  fontSize: 16, color: color, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  /// Constrói o gráfico de linha com dados agregados e com menos rótulos para evitar sobreposição
+  Widget _buildLineChart() {
+    if (aggregatedData.isEmpty) {
+      return const Center(child: Text("Sem dados para exibir"));
+    }
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(show: true),
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 30,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                int index = value.toInt();
+                if (index < 0 || index >= xLabels.length) {
+                  return const SizedBox.shrink();
+                }
+                // Para evitar sobreposição:
+                if (selectedFilter == "Dia" && index % 2 != 0) {
+                  return const SizedBox.shrink();
+                }
+                if (selectedFilter == "Mês" && index % 5 != 0) {
+                  return const SizedBox.shrink();
+                }
+                return SideTitleWidget(
+                  meta: meta,
+                  space: 4,
+                  child: Text(xLabels[index],
+                      style: const TextStyle(fontSize: 10)),
+                );
+              },
             ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(value.toInt().toString(),
+                    style: const TextStyle(fontSize: 10));
+              },
+            ),
+          ),
+          topTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        borderData: FlBorderData(show: true),
+        lineBarsData: [
+          LineChartBarData(
+            spots: List.generate(
+              aggregatedData.length,
+              (index) => FlSpot(index.toDouble(), aggregatedData[index]),
+            ),
+            isCurved: true,
+            color: Colors.blue,
+            barWidth: 3,
+            dotData: FlDotData(show: true),
           ),
         ],
       ),
     );
   }
 
-  // Gráfico de Barras Responsivo ajustado para o número de dados disponíveis
-  Widget _buildResponsiveBarChart() {
-    // Verifique se as listas de consumo, geração e economia não estão vazias
-    if (consumptionData.isEmpty || generationData.isEmpty || savingsData.isEmpty) {
+  /// Constrói o segundo gráfico de linha (reais + previsões)
+  Widget _buildSecondLineChart() {
+    if (realDataSecondChart.isEmpty && forecastDataSecondChart.isEmpty) {
       return const Center(child: Text("Sem dados para exibir"));
     }
 
-    // Limitar o número de barras ao tamanho dos dados
-    int numBars = consumptionData.length;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return BarChart(
-          BarChartData(
-            barGroups: List.generate(numBars, (index) {
-              return BarChartGroupData(
-                x: index,
-                barRods: [
-                  BarChartRodData(
-                    toY: consumptionData[index],
-                    color: Colors.red,
-                    width: 8, // Reduzindo a largura das barras
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  BarChartRodData(
-                    toY: savingsData[index],
-                    color: Colors.green,
-                    width: 8, // Reduzindo a largura das barras
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ],
-              );
-            }),
-            borderData: FlBorderData(show: false),
-            gridData: FlGridData(
-              show: true,
-              drawVerticalLine: true,
-              drawHorizontalLine: true,
-              getDrawingHorizontalLine: (value) {
-                return FlLine(
-                  color: Colors.grey.withOpacity(0.3),
-                  strokeWidth: 1,
-                  dashArray: [5, 5],
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(show: true),
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 30,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                int index = value.toInt();
+                if (index < 0 || index >= xLabelsSecondChart.length) {
+                  return const SizedBox.shrink();
+                }
+                // Para evitar sobreposição:
+                if (index % 2 != 0) {
+                  return const SizedBox.shrink();
+                }
+                return SideTitleWidget(
+                  meta: meta,
+                  space: 4,
+                  child: Text(xLabelsSecondChart[index],
+                      style: const TextStyle(fontSize: 10)),
                 );
               },
-              getDrawingVerticalLine: (value) {
-                return FlLine(
-                  color: Colors.grey.withOpacity(0.3),
-                  strokeWidth: 1,
-                  dashArray: [5, 5],
-                );
-              },
-            ),
-            titlesData: FlTitlesData(
-              leftTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              rightTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              topTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  getTitlesWidget: (value, meta) {
-                    int index = value.toInt();
-                    // Exibir rótulos como 1h, 2h, 13h
-                    return Text(
-                      "$index",
-                      style: const TextStyle(fontSize: 12),
-                    );
-                  },
-                  reservedSize: 32,
-                ),
-              ),
             ),
           ),
-        );
-      },
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(value.toInt().toString(),
+                    style: const TextStyle(fontSize: 10));
+              },
+            ),
+          ),
+          topTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        borderData: FlBorderData(show: true),
+        lineBarsData: [
+          // Linha para dados reais
+          LineChartBarData(
+            spots: List.generate(
+              realDataSecondChart.length,
+              (index) => FlSpot(index.toDouble(), realDataSecondChart[index]),
+            ),
+            isCurved: true,
+            color: Colors.blue,
+            barWidth: 3,
+            dotData: FlDotData(show: true),
+          ),
+          // Linha para dados previstos
+          LineChartBarData(
+            spots: List.generate(
+              forecastDataSecondChart.length,
+              (index) => FlSpot(
+                (realDataSecondChart.length + index).toDouble(),
+                forecastDataSecondChart[index],
+              ),
+            ),
+            isCurved: true,
+            color: Colors.orange,
+            barWidth: 3,
+            dotData: FlDotData(show: true),
+          ),
+        ],
+      ),
     );
   }
 
-  // Método para calcular o total de energia consumida ou economizada
-  double _getTotal(List<double> values) {
-    if (values.isEmpty) {
-      return 0.0; // Retorna 0.0 se a lista estiver vazia
-    }
-    return values.reduce((a, b) => a + b);
+  @override
+  Widget build(BuildContext context) {
+    double totalConsumption = aggregatedData.fold(0.0, (a, b) => a + b);
+    return Scaffold(
+      backgroundColor: Colors.grey[200],
+      appBar: AppBar(
+        title: const Text(
+          "Consumo de Energia",
+          style: TextStyle(
+              color: Colors.black, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Filtros: Dia, Semana, Mês
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildFilterButton("Dia"),
+                      _buildFilterButton("Semana"),
+                      _buildFilterButton("Mês"),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  _buildGainsCard(),
+                  const SizedBox(height: 20),
+                  // Cartões para consumo atual e previsão
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoCard(
+                          title: "Consumo Atual",
+                          value: "${totalConsumption.toStringAsFixed(2)} kWh",
+                          color: Colors.greenAccent,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildInfoCard(
+                          title: "Previsão do Modelo",
+                          value: "${_forecastTotal.toStringAsFixed(2)} kWh",
+                          color: Colors.amber,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Primeiro gráfico de linha
+                  Expanded(child: _buildLineChart()),
+                  const SizedBox(height: 20),
+                  // Segundo gráfico de linha (reais + previsões)
+                  Expanded(child: _buildSecondLineChart()),
+                ],
+              ),
+            ),
+    );
   }
 }
