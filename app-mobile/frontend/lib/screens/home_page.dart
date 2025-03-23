@@ -328,7 +328,7 @@ Widget build(BuildContext context) {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(),
             blurRadius: 5,
             spreadRadius: 2,
           ),

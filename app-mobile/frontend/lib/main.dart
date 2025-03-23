@@ -7,6 +7,7 @@ import 'package:frontend/screens/consumption.dart';
 import 'package:frontend/screens/generation.dart';
 import 'package:frontend/screens/home_page.dart';
 
+
 void main() {
   runApp(
     MultiProvider(
@@ -33,6 +34,7 @@ class MyApp extends StatelessWidget {
         '/consumption': (context) => ConsumptionPage(),
         '/generation': (context) => const GenerationPage(),
         '/homePage': (context) => const HomePage(),
+
       },
     );
   }
