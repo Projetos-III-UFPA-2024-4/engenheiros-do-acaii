@@ -1,4 +1,4 @@
-// controllers/previsaoConsumoController.js
+import moment from 'moment-timezone';
 import PrevisaoConsumoModel from "../models/previsaoConsumoModel.js";
 
 const PrevisaoConsumoController = {
@@ -27,6 +27,17 @@ const PrevisaoConsumoController = {
             if (!dadosConsumo || dadosConsumo.registros.length === 0) {
                 return res.status(404).json({ message: "Nenhum dado encontrado" });
             }
+
+            // Converte os horários dos registros de UTC para o horário de Brasília
+            dadosConsumo.registros = dadosConsumo.registros.map(registro => {
+                // Converte o tempo de UTC para o horário de Brasília
+                const tempoBrasilia = moment(registro.timestamp).tz('America/Sao_Paulo', true).format('YYYY-MM-DD HH:mm:ss');
+                
+                return {
+                    ...registro,
+                    timestamp: tempoBrasilia // Substituindo pelo tempo ajustado para Brasília
+                };
+            });
 
             // Retorna os dados no formato JSON
             res.json({ 

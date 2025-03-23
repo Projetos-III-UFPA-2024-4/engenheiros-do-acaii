@@ -42,12 +42,26 @@ const ConsumoModel = {
 
     async getConsumoSemanal() {
         try {
-            // Aqui é necessário uma consulta que pega os dados da última semana
-            const [rows] = await pool.query(
-                "SELECT `consumoTotal`, `timestamp` FROM medicao_consumo WHERE timestamp >= CURDATE() - INTERVAL 7 DAY ORDER BY timestamp DESC"
+            // Encontra o último dia registrado
+            const [latestDate] = await pool.query(
+                "SELECT MAX(DATE(timestamp)) AS ultimo_dia FROM medicao_consumo"
             );
             
-            return { ultimo_dia: rows[0]?.timestamp, registros: rows };
+            if (!latestDate[0].ultimo_dia) {
+                return { ultimo_dia: null, registros: [] };
+            }
+
+            const ultimoDia = latestDate[0].ultimo_dia;
+
+            // Busca os dados dos últimos 7 dias, incluindo todos os registros (sem soma)
+            const [rows] = await pool.query(
+                "SELECT `consumoTotal`, `timestamp` FROM medicao_consumo " +
+                "WHERE timestamp >= DATE_SUB(?, INTERVAL 7 DAY) AND DATE(timestamp) <= ? " +
+                "ORDER BY timestamp DESC",
+                [ultimoDia, ultimoDia]
+            );
+
+            return { ultimo_dia: ultimoDia, registros: rows };
         } catch (error) {
             console.error("Erro ao buscar consumo semanal:", error);
             throw error;

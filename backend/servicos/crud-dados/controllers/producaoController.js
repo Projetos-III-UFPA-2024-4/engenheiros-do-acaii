@@ -1,4 +1,4 @@
-// controllers/producaoController.js
+import moment from 'moment-timezone';
 import ProducaoModel from "../models/producaoModel.js";
 
 const ProducaoController = {
@@ -27,6 +27,14 @@ const ProducaoController = {
             if (!dadosProducao || dadosProducao.registros.length === 0) {
                 return res.status(404).json({ message: "Nenhum dado encontrado" });
             }
+
+            // Converte os horários dos registros de UTC para o horário de Brasília
+            dadosProducao.registros = dadosProducao.registros.map(registro => {
+                return {
+                    ...registro,
+                    tempo: moment.utc(registro.tempo).tz('America/Sao_Paulo').format() // Convertendo de UTC para Horário de Brasília
+                };
+            });
 
             // Retorna os dados no formato JSON
             res.json({ 
