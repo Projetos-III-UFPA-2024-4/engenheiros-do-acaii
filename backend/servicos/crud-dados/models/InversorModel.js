@@ -1,35 +1,31 @@
 import db from '../config/db.js';
 
 /**
- * Insere os dados do inversor no MySQL com nomes de colunas descritivos.
+ * Insere os dados do inversor no MySQL com controle de horário.
  * @param {Array} dados - Array de objetos JSON já mapeados para as colunas do banco
  */
 export const inserirDadosInversor = async (dados) => {
-    const sql = `INSERT INTO medicao_producao (idUsuarioTeste, tensao_pv1, corrente_pv1, potencia_pv1, 
-                                               tensao_rede_l1, corrente_rede_l1, potencia_rede_l1, 
-                                               tensao_bateria, corrente_bateria, potencia_bateria, 
-                                               status_rede, status_bateria, status_rele_rede) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const sql = `INSERT INTO medicao_producao (tempo, energia_solar_kw, clima, feed_in_kw, compra_kw) 
+                 VALUES (?, ?, ?, ?, ?)`;
 
     try {
         const connection = await db.getConnection();
         await connection.beginTransaction(); // Inicia transação para inserir múltiplos dados
 
         for (const dado of dados) {
+            // ✅ O controller já converteu o timestamp para `YYYY-MM-DD HH:MM:SS`
+            if (!dado.timestamp) {
+                console.warn("⚠️ Dados de horário ausentes! Pulando inserção deste registro:", dado);
+                continue;
+            }
+
+            // ✅ Mapeia os campos do JSON para colunas no banco
             const valores = [
-                dado.idUsuarioTeste, // ID do usuário teste (padrão 11)
-                dado.tensao_pv1 || null,
-                dado.corrente_pv1 || null,
-                dado.potencia_pv1 || null,
-                dado.tensao_rede_l1 || null,
-                dado.corrente_rede_l1 || null,
-                dado.potencia_rede_l1 || null,
-                dado.tensao_bateria || null,
-                dado.corrente_bateria || null,
-                dado.potencia_bateria || null,
-                dado.status_rede || null,
-                dado.status_bateria || null,
-                dado.status_rele_rede || null
+                dado.timestamp,            // Data e hora já formatadas pelo controller
+                dado.energia_solar_kw || null,  // Usando 'energia_solar_kw' corretamente
+                dado.clima || null,
+                dado.feed_in_kw || null,
+                dado.compra_kw || null
             ];
 
             await connection.execute(sql, valores);

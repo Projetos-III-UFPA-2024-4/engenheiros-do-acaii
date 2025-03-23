@@ -1,7 +1,0 @@
-{
-  "success": false,
-  "dataList": [],
-  "status": "warning",
-  "alerts": ["grid_failure"],
-  "message": "No connection to the grid. Check the relay status."
-}

@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => const HomeScreen(), // Tela com BottomNavigationBar
         '/alerts': (context) => const AlertsPage(),
         '/chat': (context) => const ChatPage(),
-        '/consumption': (context) => const ConsumptionPage(),
+        '/consumption': (context) => ConsumptionPage(),
         '/generation': (context) => const GenerationPage(),
         '/homePage': (context) => const HomePage(),
 
@@ -45,7 +45,7 @@ class HomeScreen extends StatelessWidget {
 
   static final List<Widget> _pages = [
     const HomePage(),
-    const ConsumptionPage(),
+     ConsumptionPage(),
     const GenerationPage(),
     const AlertsPage(),
     const ChatPage(),
