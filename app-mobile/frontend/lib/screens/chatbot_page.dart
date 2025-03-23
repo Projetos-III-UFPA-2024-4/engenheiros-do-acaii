@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:dart_openai/dart_openai.dart'; // Importe o pacote dart_openai
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // Para carregar a chave da API do .env
+import 'package:frontend/api/dialogflow.dart'; // Importe o DialogFlowService
 
 class ChatBotPage extends StatefulWidget {
   final String initialMessage; // Parâmetro para a mensagem inicial
-  final String alertTitle; // Título do alerta
+  final String alertTitle; // Título do alerta 
 
   const ChatBotPage({super.key, this.initialMessage = "", this.alertTitle = ""});
 
@@ -15,16 +14,14 @@ class ChatBotPage extends StatefulWidget {
 class _ChatBotPageState extends State<ChatBotPage> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> _messages = [];
+  final DialogFlowService _dialogFlowService = DialogFlowService(); // Instância do serviço
 
   @override
   void initState() {
     super.initState();
-    // Inicializa o ChatGPT com a chave da API
-    OpenAI.apiKey = dotenv.env['OPENAI_API_KEY']!;
-
     if (widget.initialMessage.isNotEmpty) {
       _messages.add({"text": widget.initialMessage, "sender": "user"});
-      _sendMessage(widget.initialMessage); // Envia a mensagem inicial ao ChatGPT
+      _sendMessage(widget.initialMessage); // Envia a mensagem inicial ao Dialogflow
     }
     if (widget.alertTitle.isNotEmpty) {
       _messages.add({"text": "Você está conversando sobre: ${widget.alertTitle}", "sender": "bot"});
@@ -84,8 +81,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
                         borderRadius: BorderRadius.circular(20.0),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 12.0,
-                      ),
+                        horizontal: 16.0, vertical: 12.0),
                     ),
                   ),
                 ),
@@ -113,20 +109,14 @@ class _ChatBotPageState extends State<ChatBotPage> {
     });
 
     try {
-      // Envia a mensagem ao ChatGPT e obtém a resposta
-      final completion = await OpenAI.instance.completion.create(
-        model: "text-davinci-003", // Modelo do ChatGPT
-        prompt: text,
-        maxTokens: 150, // Limite de tokens na resposta
-      );
-      final response = completion.choices.first.text.trim();
-
+      // Envia a mensagem ao Dialogflow e obtém a resposta
+      String response = await _dialogFlowService.sendMessage(text);
       setState(() {
         _messages.add({"text": response, "sender": "bot"});
       });
     } catch (e) {
       setState(() {
-        _messages.add({"text": "Erro ao se comunicar com o ChatGPT: $e", "sender": "bot"});
+        _messages.add({"text": "Erro na comunicação com o Dialogflow: $e", "sender": "bot"});
       });
     }
   }
