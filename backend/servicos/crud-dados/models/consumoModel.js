@@ -28,12 +28,24 @@ const ConsumoModel = {
 
     async getConsumoDiario() {
         try {
-            const [rows] = await pool.query(
-                "SELECT `consumoTotal`, `timestamp` FROM medicao_consumo ORDER BY timestamp DESC"
+            // Encontra o último dia registrado
+            const [latestDate] = await pool.query(
+                "SELECT MAX(DATE(timestamp)) AS ultimo_dia FROM medicao_consumo"
             );
             
-            // Retorna todos os dados do consumo diário sem somar
-            return { ultimo_dia: rows[0]?.timestamp, registros: rows };
+            if (!latestDate[0].ultimo_dia) {
+                return { ultimo_dia: null, registros: [] };
+            }
+
+            const ultimoDia = latestDate[0].ultimo_dia;
+
+            // Busca os dados somente do último dia
+            const [rows] = await pool.query(
+                "SELECT `consumoTotal`, `timestamp` FROM medicao_consumo WHERE DATE(timestamp) = ? ORDER BY timestamp DESC",
+                [ultimoDia]
+            );
+            
+            return { ultimo_dia: ultimoDia, registros: rows };
         } catch (error) {
             console.error("Erro ao buscar consumo diário:", error);
             throw error;
