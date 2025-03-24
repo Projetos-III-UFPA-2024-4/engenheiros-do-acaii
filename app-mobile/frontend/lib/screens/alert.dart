@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_p
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'chatbot_page.dart'; // Importe a página de chat
