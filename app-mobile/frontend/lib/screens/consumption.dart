@@ -24,27 +24,21 @@ class ConsumptionPageState extends State<ConsumptionPage> {
 
   /// Lista dos registros retornados pela API
   List<RegistroConsumo> _listaConsumo = [];
+  List<RegistroConsumo> _listaPrevisao = [];
 
   /// Dados agregados para o gráfico de linha
   List<double> aggregatedData = [];
+  List<double> aggregatedForecastData = [];
 
   /// Rótulos para o eixo X do gráfico
   List<String> xLabels = [];
+  List<String> xForecastLabels = [];
 
   /// Total previsto retornado pela API de previsão (usado no card)
   double _forecastTotal = 0.0;
 
   /// Valor (em R$) por kWh
   final double valorKWh = 0.938;
-
-  /// Dados reais para o segundo gráfico (últimos 15 dias)
-  List<double> realDataSecondChart = [];
-
-  /// Dados previstos para o segundo gráfico (próximos 15 dias)
-  List<double> forecastDataSecondChart = [];
-
-  /// Rótulos para o eixo X do segundo gráfico
-  List<String> xLabelsSecondChart = [];
 
   @override
   void initState() {
@@ -100,10 +94,12 @@ class ConsumptionPageState extends State<ConsumptionPage> {
 
       setState(() {
         _listaConsumo = lista;
+        _listaPrevisao = listaPrevisao;
         _forecastTotal = forecastTotal;
       });
 
       _aggregateData();
+      _aggregateForecastData();
     } catch (e) {
       print("Erro ao buscar dados: $e");
     } finally {
@@ -122,9 +118,6 @@ class ConsumptionPageState extends State<ConsumptionPage> {
       setState(() {
         aggregatedData = [];
         xLabels = [];
-        realDataSecondChart = [];
-        forecastDataSecondChart = [];
-        xLabelsSecondChart = [];
       });
       return;
     }
@@ -218,56 +211,64 @@ class ConsumptionPageState extends State<ConsumptionPage> {
         xLabels = labels;
       });
     }
-
-    // Prepara os dados para o segundo gráfico
-    _prepareSecondChartData(lastMeasurement);
   }
 
-  /// Prepara os dados para o segundo gráfico
-  void _prepareSecondChartData(DateTime lastMeasurement) {
-    // Limpa os dados anteriores
-    realDataSecondChart.clear();
-    forecastDataSecondChart.clear();
-    xLabelsSecondChart.clear();
+  /// Agrega os dados de previsão para o mês da última previsão
+  void _aggregateForecastData() {
+  if (_listaPrevisao.isEmpty || _listaConsumo.isEmpty) {
+    setState(() {
+      aggregatedForecastData = [];
+      xForecastLabels = [];
+    });
+    return;
+  }
 
-    // Coleta os últimos 15 dias reais
-    DateTime startDate = lastMeasurement.subtract(Duration(days: 14));
-    for (int i = 0; i < 15; i++) {
-      DateTime day = startDate.add(Duration(days: i));
-      double sum = 0.0;
+  // Determina a última medição
+  DateTime lastMeasurement = _listaConsumo.reduce(
+    (a, b) => a.tempo.isAfter(b.tempo) ? a : b,
+  ).tempo;
 
-      // Soma os valores reais para o dia
-      for (var reg in _listaConsumo) {
+  // Define o início como o primeiro dia do mês da última medição
+  DateTime startDate = DateTime(lastMeasurement.year, lastMeasurement.month, 1);
+  // Define o fim como o último dia do mês da última medição
+  DateTime endDate = DateTime(lastMeasurement.year, lastMeasurement.month + 1, 0);
+  int daysInMonth = endDate.day;
+
+  List<double> data = List.filled(daysInMonth, 0.0);
+  List<String> labels = [];
+
+  for (int i = 0; i < daysInMonth; i++) {
+    DateTime day = startDate.add(Duration(days: i));
+    double sum = 0.0;
+
+    // Verifica se o dia já possui medições reais
+    bool hasRealMeasurement = _listaConsumo.any((reg) {
+      DateTime regDate = DateTime(reg.tempo.year, reg.tempo.month, reg.tempo.day);
+      return regDate == day;
+    });
+
+    // Se o dia já possui medições reais, define o valor como 0
+    if (hasRealMeasurement) {
+      data[i] = 0.0;
+    } else {
+      // Caso contrário, soma os valores de previsão para o dia
+      for (var reg in _listaPrevisao) {
         DateTime regDate = DateTime(reg.tempo.year, reg.tempo.month, reg.tempo.day);
         if (regDate == day) {
           sum += reg.kw;
         }
       }
-
-      realDataSecondChart.add(sum);
-      xLabelsSecondChart.add(DateFormat('dd/MM').format(day));
+      data[i] = sum;
     }
 
-    // Coleta as previsões para os próximos 15 dias
-    DateTime forecastStartDate = lastMeasurement.add(Duration(days: 1));
-    for (int i = 0; i < 15; i++) {
-      DateTime day = forecastStartDate.add(Duration(days: i));
-      double sum = 0.0;
-
-      // Soma os valores previstos para o dia
-      for (var reg in _listaConsumo) {
-        DateTime regDate = DateTime(reg.tempo.year, reg.tempo.month, reg.tempo.day);
-        if (regDate == day) {
-          sum += reg.kw;
-        }
-      }
-
-      forecastDataSecondChart.add(sum);
-      xLabelsSecondChart.add(DateFormat('dd/MM').format(day));
-    }
-
-    setState(() {});
+    labels.add(DateFormat('dd/MM').format(day));
   }
+
+  setState(() {
+    aggregatedForecastData = data;
+    xForecastLabels = labels;
+  });
+}
 
   /// Constrói um botão para seleção do filtro
   Widget _buildFilterButton(String filter) {
@@ -447,12 +448,11 @@ class ConsumptionPageState extends State<ConsumptionPage> {
     );
   }
 
-  /// Constrói o segundo gráfico de linha (reais + previsões)
-  Widget _buildSecondLineChart() {
-    if (realDataSecondChart.isEmpty && forecastDataSecondChart.isEmpty) {
-      return const Center(child: Text("Sem dados para exibir"));
+  /// Constrói o gráfico de linha para os dados de previsão
+  Widget _buildForecastLineChart() {
+    if (aggregatedForecastData.isEmpty) {
+      return const Center(child: Text("Sem dados de previsão para exibir"));
     }
-
     return LineChart(
       LineChartData(
         gridData: FlGridData(show: true),
@@ -464,17 +464,17 @@ class ConsumptionPageState extends State<ConsumptionPage> {
               interval: 1,
               getTitlesWidget: (value, meta) {
                 int index = value.toInt();
-                if (index < 0 || index >= xLabelsSecondChart.length) {
+                if (index < 0 || index >= xForecastLabels.length) {
                   return const SizedBox.shrink();
                 }
                 // Para evitar sobreposição:
-                if (index % 2 != 0) {
+                if (index % 5 != 0) {
                   return const SizedBox.shrink();
                 }
                 return SideTitleWidget(
                   meta: meta,
                   space: 4,
-                  child: Text(xLabelsSecondChart[index],
+                  child: Text(xForecastLabels[index],
                       style: const TextStyle(fontSize: 10)),
                 );
               },
@@ -499,28 +499,13 @@ class ConsumptionPageState extends State<ConsumptionPage> {
         ),
         borderData: FlBorderData(show: true),
         lineBarsData: [
-          // Linha para dados reais
           LineChartBarData(
             spots: List.generate(
-              realDataSecondChart.length,
-              (index) => FlSpot(index.toDouble(), realDataSecondChart[index]),
+              aggregatedForecastData.length,
+              (index) => FlSpot(index.toDouble(), aggregatedForecastData[index]),
             ),
             isCurved: true,
-            color: Colors.blue,
-            barWidth: 3,
-            dotData: FlDotData(show: true),
-          ),
-          // Linha para dados previstos
-          LineChartBarData(
-            spots: List.generate(
-              forecastDataSecondChart.length,
-              (index) => FlSpot(
-                (realDataSecondChart.length + index).toDouble(),
-                forecastDataSecondChart[index],
-              ),
-            ),
-            isCurved: true,
-            color: Colors.orange,
+            color: Colors.red,
             barWidth: 3,
             dotData: FlDotData(show: true),
           ),
@@ -529,69 +514,97 @@ class ConsumptionPageState extends State<ConsumptionPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    double totalConsumption = aggregatedData.fold(0.0, (a, b) => a + b);
-    return Scaffold(
-      backgroundColor: Colors.grey[200],
-      appBar: AppBar(
-        title: const Text(
-          "Consumo de Energia",
-          style: TextStyle(
-              color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+ @override
+Widget build(BuildContext context) {
+  double totalConsumption = aggregatedData.fold(0.0, (a, b) => a + b);
+  return Scaffold(
+    backgroundColor: Colors.grey[200],
+    appBar: AppBar(
+      title: const Text(
+        "Consumo de Energia",
+        style: TextStyle(
+            color: Colors.black, fontWeight: FontWeight.bold),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Filtros: Dia, Semana, Mês
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildFilterButton("Dia"),
-                      _buildFilterButton("Semana"),
-                      _buildFilterButton("Mês"),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  _buildGainsCard(),
-                  const SizedBox(height: 20),
-                  // Cartões para consumo atual e previsão
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildInfoCard(
-                          title: "Consumo Atual",
-                          value: "${totalConsumption.toStringAsFixed(2)} kWh",
-                          color: Colors.greenAccent,
+      centerTitle: true,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+    ),
+    body: isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Filtros: Dia, Semana, Mês
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildFilterButton("Dia"),
+                    _buildFilterButton("Semana"),
+                    _buildFilterButton("Mês"),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _buildGainsCard(),
+                const SizedBox(height: 20),
+                // Cartões para consumo atual e previsão
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildInfoCard(
+                        title: "Consumo Atual",
+                        value: "${totalConsumption.toStringAsFixed(2)} kWh",
+                        color: Colors.greenAccent,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildInfoCard(
+                        title: "Previsão do Modelo",
+                        value: "${_forecastTotal.toStringAsFixed(2)} kWh",
+                        color: Colors.amber,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // Gráfico de linha para consumo atual
+                Expanded(child: _buildLineChart()),
+                const SizedBox(height: 20),
+                // Botão "Ver previsões do mês" (aparece apenas nos filtros "Dia" e "Semana")
+                if (selectedFilter != "Mês")
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          selectedFilter = "Mês"; // Muda para o filtro "Mês"
+                        });
+                        _fetchData(); // Atualiza os dados
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildInfoCard(
-                          title: "Previsão do Modelo",
-                          value: "${_forecastTotal.toStringAsFixed(2)} kWh",
-                          color: Colors.amber,
+                      child: const Text(
+                        "Ver previsões do mês",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 20),
-                  // Primeiro gráfico de linha
-                  Expanded(child: _buildLineChart()),
-                  const SizedBox(height: 20),
-                  // Segundo gráfico de linha (reais + previsões)
-                  Expanded(child: _buildSecondLineChart()),
-                ],
-              ),
+                // Gráfico de linha para previsão (aparece apenas no filtro "Mês")
+                if (selectedFilter == "Mês")
+                  Expanded(child: _buildForecastLineChart()),
+              ],
             ),
-    );
-  }
+          ),
+  );
+}
 }

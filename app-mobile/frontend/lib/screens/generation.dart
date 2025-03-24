@@ -24,12 +24,15 @@ class GenerationPageState extends State<GenerationPage> {
 
   /// Lista dos registros retornados pela API
   List<RegistroProducao> _listaProducao = [];
+  List<RegistroProducao> _listaPrevisao = [];
 
   /// Dados agregados para o gráfico de linha
   List<double> aggregatedData = [];
+  List<double> aggregatedForecastData = [];
 
   /// Rótulos para o eixo X do gráfico
   List<String> xLabels = [];
+  List<String> xForecastLabels = [];
 
   /// Total previsto retornado pela API de previsão (usado no card)
   double _forecastTotal = 0.0;
@@ -91,10 +94,12 @@ class GenerationPageState extends State<GenerationPage> {
 
       setState(() {
         _listaProducao = lista;
+        _listaPrevisao = listaPrevisao;
         _forecastTotal = forecastTotal;
       });
 
       _aggregateData();
+      _aggregateForecastData();
     } catch (e) {
       print("Erro ao buscar dados: $e");
     } finally {
@@ -206,6 +211,62 @@ class GenerationPageState extends State<GenerationPage> {
       xLabels = labels;
     });
   }
+}
+
+void _aggregateForecastData() {
+  if (_listaPrevisao.isEmpty || _listaProducao.isEmpty) {
+    setState(() {
+      aggregatedForecastData = [];
+      xForecastLabels = [];
+    });
+    return;
+  }
+
+  // Determina a última medição
+  DateTime lastMeasurement = _listaProducao.reduce(
+    (a, b) => a.tempo.isAfter(b.tempo) ? a : b,
+  ).tempo;
+
+  // Define o início como o primeiro dia do mês da última medição
+  DateTime startDate = DateTime(lastMeasurement.year, lastMeasurement.month, 1);
+  // Define o fim como o último dia do mês da última medição
+  DateTime endDate = DateTime(lastMeasurement.year, lastMeasurement.month + 1, 0);
+  int daysInMonth = endDate.day;
+
+  List<double> data = List.filled(daysInMonth, 0.0);
+  List<String> labels = [];
+
+  for (int i = 0; i < daysInMonth; i++) {
+    DateTime day = startDate.add(Duration(days: i));
+    double sum = 0.0;
+
+    // Verifica se o dia já possui medições reais
+    bool hasRealMeasurement = _listaProducao.any((reg) {
+      DateTime regDate = DateTime(reg.tempo.year, reg.tempo.month, reg.tempo.day);
+      return regDate == day;
+    });
+
+    // Se o dia já possui medições reais, define o valor como 0
+    if (hasRealMeasurement) {
+      data[i] = 0.0;
+    } else {
+      // Caso contrário, soma os valores de previsão para o dia
+      for (var reg in _listaPrevisao) {
+        DateTime regDate = DateTime(reg.tempo.year, reg.tempo.month, reg.tempo.day);
+        if (regDate == day) {
+          sum += reg.kw;
+        }
+      }
+      data[i] = sum;
+    }
+
+    labels.add(DateFormat('dd/MM').format(day));
+  }
+
+  setState(() {
+    aggregatedForecastData = data;
+    xForecastLabels = labels;
+  });
 }
 
   /// Constrói um botão para seleção do filtro
@@ -387,6 +448,72 @@ class GenerationPageState extends State<GenerationPage> {
     );
   }
 
+   /// Constrói o gráfico de linha para os dados de previsão
+  Widget _buildForecastLineChart() {
+    if (aggregatedForecastData.isEmpty) {
+      return const Center(child: Text("Sem dados de previsão para exibir"));
+    }
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(show: true),
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 30,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                int index = value.toInt();
+                if (index < 0 || index >= xForecastLabels.length) {
+                  return const SizedBox.shrink();
+                }
+                // Para evitar sobreposição:
+                if (index % 5 != 0) {
+                  return const SizedBox.shrink();
+                }
+                return SideTitleWidget(
+                  meta: meta,
+                  space: 4,
+                  child: Text(xForecastLabels[index],
+                      style: const TextStyle(fontSize: 10)),
+                );
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(value.toInt().toString(),
+                    style: const TextStyle(fontSize: 10));
+              },
+            ),
+          ),
+          topTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        borderData: FlBorderData(show: true),
+        lineBarsData: [
+          LineChartBarData(
+            spots: List.generate(
+              aggregatedForecastData.length,
+              (index) => FlSpot(index.toDouble(), aggregatedForecastData[index]),
+            ),
+            isCurved: true,
+            color: Colors.red,
+            barWidth: 3,
+            dotData: FlDotData(show: true),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     double totalProduction = aggregatedData.fold(0.0, (a, b) => a + b);
@@ -444,6 +571,37 @@ class GenerationPageState extends State<GenerationPage> {
                   const SizedBox(height: 20),
                   // Gráfico de linha
                   Expanded(child: _buildLineChart()),
+                  const SizedBox(height: 20),
+                // Botão "Ver previsões do mês" (aparece apenas nos filtros "Dia" e "Semana")
+                if (selectedFilter != "Mês")
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          selectedFilter = "Mês"; // Muda para o filtro "Mês"
+                        });
+                        _fetchData(); // Atualiza os dados
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: const Text(
+                        "Ver previsões do mês",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                // Gráfico de linha para previsão (aparece apenas no filtro "Mês")
+                if (selectedFilter == "Mês")
+                  Expanded(child: _buildForecastLineChart()),
                 ],
               ),
             ),
