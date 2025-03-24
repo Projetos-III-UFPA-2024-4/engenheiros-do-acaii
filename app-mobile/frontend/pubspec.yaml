@@ -37,9 +37,15 @@ dependencies:
   uuid: ^4.5.1
   flutter_dotenv: ^5.2.1
   intl: any
+
+  flutter_svg: ^2.0.17
+
+
+
   web_socket_channel: ^2.1.0
 
   
+
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -66,6 +72,8 @@ dev_dependencies:
 flutter:
   assets:
     - assets/credentials/chatbot-smartvolt-sij9-cca54af4ec1f.json
+    - assets/images/açaizinho.png
+    - assets/images/logo.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

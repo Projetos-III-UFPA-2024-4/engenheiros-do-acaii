@@ -12,17 +12,29 @@ class AlertsPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          "Alertas",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween, // Alinha título e ícone
+          children: [
+            const Text(
+              "Alertas",
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+            // Ajuste o tamanho do logo para ficar maior, mas sem cortar
+            Image.asset(
+              'assets/images/logo.png', // Logo à direita
+              width: 90,  // Ajuste o tamanho do logo para ser maior
+              height: 90, // Aumenta o tamanho do logo para não cortar
+            ),
+          ],
         ),
         centerTitle: false,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center, // Centraliza o conteúdo verticalmente
           children: [
+            const SizedBox(height: 20), // Ajuste para centralizar melhor os itens
             // Lista de Alertas
             Expanded(
               child: ListView(
@@ -62,100 +74,122 @@ class AlertsPage extends StatelessWidget {
   }) {
     String formattedTime = DateFormat('dd/MM/yyyy HH:mm').format(timestamp);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            blurRadius: 5,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.warning, color: Colors.orange, size: 30),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+    return InkWell(
+      onTap: () {
+        // Ação de navegação ou clique
+        print('Card clicado: $title');
+      },
+      child: MouseRegion(
+        onEnter: (_) {
+          // Alterar o cursor ao passar o mouse
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16), // Menor margem entre os cartões
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16), // Padding menor
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12), // Menor border radius
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 3, // Menos intensidade na sombra
+                spreadRadius: 1, // Menos espalhamento da sombra
               ),
             ],
           ),
-          const SizedBox(height: 5),
-          Text(
-            description,
-            style: const TextStyle(fontSize: 14, color: Colors.black54),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            "📅 $formattedTime",
-            style: const TextStyle(fontSize: 13, color: Colors.black45),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              GestureDetector(
-                onTap: () {
-                  // Redireciona para a página de chat (mantém a navegação na pilha)
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ChatBotPage()),
-                  );
-                },
-                child: const Text(
-                  "Falar com Açaizinho",
-                  style: TextStyle(
-                    color: Colors.purple,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  // Ação de avisar o serviço técnico
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text("Aviso"),
-                        content: const Text("Aviso enviado ao serviço técnico."),
-                        actions: <Widget>[
-                          TextButton(
-                            child: const Text("OK"),
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
+              Row(
+                children: [
+                  const Icon(Icons.warning, color: Colors.orange, size: 30), // Ícone de alerta menor
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 14, // Tamanho do título ajustado
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          description,
+                          style: const TextStyle(
+                            fontSize: 13, // Tamanho da descrição ajustado
+                            color: Colors.black54,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          "📅 $formattedTime",
+                          style: const TextStyle(
+                            fontSize: 12, // Tamanho da data ajustado
+                            color: Colors.black45,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  InkWell(
+                    onTap: () {
+                      // Redireciona para a página de chat (mantém a navegação na pilha)
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ChatBotPage()),
                       );
                     },
-                  );
-                },
-                child: const Text(
-                  "Avisar serviço técnico",
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
+                    child: const Text(
+                      "Falar com Açaizinho",
+                      style: TextStyle(
+                        color: Colors.purple,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
+                  InkWell(
+                    onTap: () {
+                      // Ação de avisar o serviço técnico
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: const Text("Aviso"),
+                            content: const Text("Aviso enviado ao serviço técnico."),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text("OK"),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    child: const Text(
+                      "Avisar serviço técnico",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
