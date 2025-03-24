@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ProducaoService {
-  static const baseUrl = 'http://localhost:5000/servicos/crud-dados';
+  static const baseUrl = 'http://10.0.2.2:5000/servicos/crud-dados';
 
   // Chama o endpoint de produção, passando o parâmetro de período
   static Future<Map<String, dynamic>> getProducaoReal(String periodo) async {

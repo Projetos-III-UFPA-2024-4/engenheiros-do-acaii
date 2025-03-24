@@ -71,16 +71,16 @@ class _HomePageState extends State<HomePage> {
     try {
       final periodo = _getApiPeriodo(selectedFilter);
       final consumptionResponse = await http.get(
-        Uri.parse('http://localhost:5000/servicos/crud-dados/consumo-real?periodo=$periodo'),
+        Uri.parse('http://10.0.2.2:5000/servicos/crud-dados/consumo-real?periodo=$periodo'),
       );
       final generationResponse = await http.get(
-        Uri.parse('http://localhost:5000/servicos/crud-dados/producao-real?periodo=$periodo'),
+        Uri.parse('http://10.0.2.2:5000/servicos/crud-dados/producao-real?periodo=$periodo'),
       );
       final predictedConsumptionResponse = await http.get(
-        Uri.parse('http://localhost:5000/servicos/crud-dados/previsao-consumo?periodo=$periodo'),
+        Uri.parse('http://10.0.2.2:5000/servicos/crud-dados/previsao-consumo?periodo=$periodo'),
       );
       final predictedGenerationResponse = await http.get(
-        Uri.parse('http://localhost:5000/servicos/crud-dados/previsao-producao?periodo=$periodo'),
+        Uri.parse('http://10.0.2.2:5000/servicos/crud-dados/previsao-producao?periodo=$periodo'),
       );
 
       if (consumptionResponse.statusCode == 200 &&
