@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frontend/screens/chatbot_page.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/api/dialogflow.dart';
