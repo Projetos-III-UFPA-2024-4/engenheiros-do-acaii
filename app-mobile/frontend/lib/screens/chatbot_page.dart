@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:frontend/api/dialogflow.dart'; // Importe o DialogFlowService
 
 class ChatBotPage extends StatefulWidget {
   final String initialMessage; // Parâmetro para a mensagem inicial
-  final String alertTitle; // Título do alerta 
+  final String alertTitle; // Título do alerta
 
   const ChatBotPage({super.key, this.initialMessage = "", this.alertTitle = ""});
 
@@ -32,9 +33,28 @@ class _ChatBotPageState extends State<ChatBotPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Chat com Açaizinho"),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/açaizinho.png', // Ícone do Açaizinho
+              width: 40,
+              height: 40,
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              "Açaízinho",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.purple, // Cor temática
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             Navigator.pop(context); // Botão de voltar
           },
@@ -44,25 +64,50 @@ class _ChatBotPageState extends State<ChatBotPage> {
         children: [
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(16),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final message = _messages[index];
                 final isUser = message["sender"] == "user";
 
-                return Align(
-                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4.0),
-                    padding: const EdgeInsets.all(12.0),
-                    decoration: BoxDecoration(
-                      color: isUser ? Colors.blue[100] : Colors.green[100],
-                      borderRadius: BorderRadius.circular(12.0),
-                    ),
-                    child: Text(
-                      message["text"]!,
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+                    children: [
+                      if (!isUser)
+                        CircleAvatar(
+                          backgroundColor: Colors.white,
+                          child: Image.asset(
+                            'assets/images/açaizinho.png', // Ícone do Açaizinho
+                            width: 40,
+                            height: 40,
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isUser ? Colors.purple[100] : Colors.purple[50],
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withValues(),
+                              blurRadius: 5,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          message["text"] ?? "Mensagem inválida",
+                          style: TextStyle(
+                            color: isUser ? Colors.black87 : Colors.black87,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -73,24 +118,50 @@ class _ChatBotPageState extends State<ChatBotPage> {
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      hintText: "Digite uma mensagem...",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withValues(),
+                          blurRadius: 5,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _controller,
+                      decoration: const InputDecoration(
+                        hintText: 'Digite uma mensagem...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 12.0),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8.0),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Colors.blue),
-                  onPressed: () {
-                    _sendMessage(_controller.text);
-                  },
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.purple,
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withValues(),
+                        blurRadius: 5,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: () {
+                      if (_controller.text.isNotEmpty) {
+                        _sendMessage(_controller.text);
+                        _controller.clear();
+                      }
+                    },
+                  ),
                 ),
               ],
             ),
