@@ -59,9 +59,6 @@ df = df.dropna()
 print("\nShape do DataFrame após limpeza:")
 print(df.shape)
 
-# Transformação logarítmica para lidar com valores positivos
-df["y_log"] = np.log(df["y"])
-
 # Verificar se há dados suficientes
 if len(df) < 2:
     raise ValueError("Dados insuficientes após limpeza. Necessário pelo menos 2 observações.")
@@ -76,7 +73,7 @@ modelo = Prophet(
 )
 
 # Criar DataFrame para treino com as colunas esperadas pelo Prophet
-df_treino = df[["ds", "y_log"]].copy()
+df_treino = df[["ds", "y"]].copy()
 df_treino.columns = ["ds", "y"]
 
 try:
@@ -88,9 +85,6 @@ except Exception as e:
 # Fazer previsão para os próximos 30 dias (1440 períodos de 10 minutos)
 futuro = modelo.make_future_dataframe(periods=1440, freq="10min")
 previsao = modelo.predict(futuro)
-
-# Reverter a transformação logarítmica e garantir valores não-negativos
-previsao["yhat"] = np.exp(previsao["yhat"]).clip(lower=0)
 
 # Preparar dados reais para comparação (sem transformação log)
 df_real = df.copy()
@@ -148,13 +142,13 @@ conn = pymysql.connect(
 cursor = conn.cursor()
 
 query = f"""
-INSERT INTO previsao_producao (geracao (kwh), timestamp)
+INSERT INTO previsao_consumo (consumo, timestamp)
 VALUES (%s, %s)
 """
 
 # 🔹 Inserir previsões no banco usando apenas ds e yhat, renomeados na query
-for _, row in previsao_data.iterrows():
-    cursor.execute(query, (row["geracao (kwh)"], row["timestamp"]))
+for _, row in previsao.iterrows():
+    cursor.execute(query, (row["yhat"], row["ds"]))
 
 # 🔹 Confirmar e fechar conexão
 conn.commit()
@@ -172,7 +166,7 @@ cursor = conn.cursor()
 
 # 🔹 Query SQL para buscar as últimas 10 linhas inseridas
 query = f"""
-SELECT * FROM previsao_producao
+SELECT * FROM previsao_consumo
 ORDER BY timestamp DESC
 LIMIT 10;
 """

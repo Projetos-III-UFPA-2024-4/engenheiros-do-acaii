@@ -24,7 +24,7 @@ TABLE_NAME = os.getenv("TABLE_NAME")
 engine = create_engine(f"mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}")
 
 # Definir a query SQL para buscar os dados
-query = "SELECT * FROM medicao_consumo"
+query = "SELECT * FROM medicao_producao"
 
 # Ler os dados diretamente do banco para um DataFrame Pandas
 df = pd.read_sql(query, con=engine)
@@ -32,7 +32,7 @@ print("Primeiras linhas do DataFrame:")
 print(df.head())
 
 # Preparando dados para Prophet
-df = df[["timestamp", "consumoTotal"]].copy()
+df = df[["tempo", "energia_solar_kw"]].copy()
 df.columns = ["ds", "y"]
 
 # Remover duplicatas de timestamp
@@ -60,7 +60,7 @@ print("\nShape do DataFrame após limpeza:")
 print(df.shape)
 
 # Transformação logarítmica para lidar com valores positivos
-df["y_log"] = np.log(df["y"])
+# df["y_log"] = np.log(df["y"])
 
 # Verificar se há dados suficientes
 if len(df) < 2:
@@ -76,7 +76,7 @@ modelo = Prophet(
 )
 
 # Criar DataFrame para treino com as colunas esperadas pelo Prophet
-df_treino = df[["ds", "y_log"]].copy()
+df_treino = df[["ds", "y"]].copy()
 df_treino.columns = ["ds", "y"]
 
 try:
@@ -86,11 +86,12 @@ except Exception as e:
     raise
 
 # Fazer previsão para os próximos 30 dias (1440 períodos de 10 minutos)
-futuro = modelo.make_future_dataframe(periods=1440, freq="10min")
+#futuro = modelo.make_future_dataframe(periods=1440, freq="10min")
+futuro = modelo.make_future_dataframe(periods=1, freq="10min")
 previsao = modelo.predict(futuro)
 
 # Reverter a transformação logarítmica e garantir valores não-negativos
-previsao["yhat"] = np.exp(previsao["yhat"]).clip(lower=0)
+# previsao["yhat"] = np.exp(previsao["yhat"]).clip(lower=0)
 
 # Preparar dados reais para comparação (sem transformação log)
 df_real = df.copy()
@@ -129,7 +130,7 @@ plt.fill_between(previsao["ds"], previsao["yhat_lower"], previsao["yhat_upper"],
                  color="pink", alpha=0.3, label="Intervalo de Confiança")
 plt.title("Comparação entre Valores Reais e Previsões")
 plt.xlabel("Data")
-plt.ylabel("Consumo (kWh)")
+plt.ylabel("Consumo")
 plt.legend()
 plt.grid(True)
 plt.show()
@@ -148,13 +149,13 @@ conn = pymysql.connect(
 cursor = conn.cursor()
 
 query = f"""
-INSERT INTO previsao_producao (geracao (kwh), timestamp)
+INSERT INTO previsao_producao (`geracao (kwh)`, `timestamp`)
 VALUES (%s, %s)
 """
 
 # 🔹 Inserir previsões no banco usando apenas ds e yhat, renomeados na query
-for _, row in previsao_data.iterrows():
-    cursor.execute(query, (row["geracao (kwh)"], row["timestamp"]))
+for _, row in previsao.iterrows():
+    cursor.execute(query, (row["yhat"], row["ds"]))
 
 # 🔹 Confirmar e fechar conexão
 conn.commit()

@@ -14,8 +14,8 @@ export const receberDadosInversor = async (req, res) => {
 
         // 🔹 Mapeamento das chaves do JSON para os nomes das colunas no banco
         const mapeamento = {
-            "timestamp": "timestamp",  // Usando 'timestamp' ao invés de 'tempo'
-            "energia_solar_kw": "energia_solar_kw",  // Corrigido para o nome da coluna
+            "tempo": "tempo",  // Usando 'tempo' diretamente para corresponder ao nome do campo
+            "energia_solar_kw": "energia_solar_kw", 
             "clima": "clima",
             "feed_in_kw": "feed_in_kw",
             "compra_kw": "compra_kw"
@@ -31,13 +31,6 @@ export const receberDadosInversor = async (req, res) => {
             });
 
             return itemFormatado;
-        });
-
-        // 🚀 Validação e conversão da hora
-        dadosFormatados.forEach(dado => {
-            if (dado.timestamp) {
-                dado.timestamp = `${new Date().toISOString().slice(0, 10)} ${dado.timestamp}`;
-            }
         });
 
         // 📌 Chama o Model para salvar no banco de dados
