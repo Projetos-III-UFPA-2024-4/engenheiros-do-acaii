@@ -35,4 +35,4 @@ def enviar_csv_como_json_medidor(arquivo_csv, url_destino):
         print(f"Erro ao enviar JSON: {resposta.status_code} - {resposta.text}")
 
 # Exemplo de uso
-enviar_csv_como_json_medidor('1a14Marco.csv', 'http://localhost:5000/servicos/crud-dados/medidor-json')
+enviar_csv_como_json_medidor('teste.csv', 'http://localhost:5000/servicos/crud-dados/medidor-json')

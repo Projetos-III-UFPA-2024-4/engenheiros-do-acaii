@@ -13,16 +13,15 @@ export const inserirDadosInversor = async (dados) => {
         await connection.beginTransaction(); // Inicia transação para inserir múltiplos dados
 
         for (const dado of dados) {
-            // ✅ O controller já converteu o timestamp para `YYYY-MM-DD HH:MM:SS`
-            if (!dado.timestamp) {
+            // Verifica se o campo tempo está presente
+            if (!dado.tempo) {
                 console.warn("⚠️ Dados de horário ausentes! Pulando inserção deste registro:", dado);
                 continue;
             }
 
-            // ✅ Mapeia os campos do JSON para colunas no banco
             const valores = [
-                dado.timestamp,            // Data e hora já formatadas pelo controller
-                dado.energia_solar_kw || null,  // Usando 'energia_solar_kw' corretamente
+                dado.tempo,            // Mantendo o formato original de 'tempo'
+                dado.energia_solar_kw || null,
                 dado.clima || null,
                 dado.feed_in_kw || null,
                 dado.compra_kw || null

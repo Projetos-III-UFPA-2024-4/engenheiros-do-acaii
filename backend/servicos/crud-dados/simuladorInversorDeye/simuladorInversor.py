@@ -30,6 +30,10 @@ def enviar_csv_como_json(arquivo_csv, url_destino):
                 "compra_kw": float(linha["Compra（kW）"].replace(",", ".")) if linha["Compra（kW）"] else None
             })
 
+    # Mostrar o JSON estruturado
+    print("Estrutura dos dados em JSON:")
+    print(json.dumps(dados, indent=4))  # Formata o JSON com indentação para facilitar a leitura
+
     # Enviar os dados lidos como JSON via POST
     resposta = requests.post(url_destino, json=dados)
     
@@ -39,4 +43,4 @@ def enviar_csv_como_json(arquivo_csv, url_destino):
         print(f"Erro ao enviar JSON: {resposta.status_code} - {resposta.text}")
 
 # Exemplo de uso
-enviar_csv_como_json('1a15MarcoEdgar.csv', 'http://localhost:5000/servicos/crud-dados/inversor-json')
+enviar_csv_como_json('teste.csv', 'http://localhost:5000/servicos/crud-dados/inversor-json')
