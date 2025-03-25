@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = "http://10.0.2.2:5000"; // Ajuste conforme necessário
+  static const String baseUrl = "http://3.238.96.189:8080/servicos/crud-dados"; // Ajuste conforme necessário
 
   static Future<List<dynamic>> buscarPessoas() async {
     try {

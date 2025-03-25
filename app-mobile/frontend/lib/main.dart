@@ -7,7 +7,6 @@ import 'package:frontend/screens/consumption.dart';
 import 'package:frontend/screens/generation.dart';
 import 'package:frontend/screens/home_page.dart';
 
-
 void main() {
   runApp(
     MultiProvider(
@@ -24,17 +23,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      // Define a rota inicial
       initialRoute: '/',
-      // Mapeia as rotas nomeadas
       routes: {
-        '/': (context) => const HomeScreen(), // Tela com BottomNavigationBar
+        '/': (context) => const HomeScreen(),
         '/alerts': (context) => const AlertsPage(),
         '/chat': (context) => const ChatPage(),
         '/consumption': (context) => ConsumptionPage(),
         '/generation': (context) => const GenerationPage(),
         '/homePage': (context) => const HomePage(),
-
       },
     );
   }
@@ -44,11 +40,11 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   static final List<Widget> _pages = [
-    const HomePage(),
-     ConsumptionPage(),
-    const GenerationPage(),
-    const AlertsPage(),
-    const ChatPage(),
+    const RefreshableWrapper(child: HomePage()),
+    const RefreshableWrapper(child: ConsumptionPage()),
+    const RefreshableWrapper(child: GenerationPage()),
+    const RefreshableWrapper(child: AlertsPage()),
+    const RefreshableWrapper(child: ChatPage()),
   ];
 
   @override
@@ -56,9 +52,7 @@ class HomeScreen extends StatelessWidget {
     final navigationProvider = Provider.of<NavigationProvider>(context);
 
     return Scaffold(
-      // Exibe a página correspondente ao índice selecionado
       body: _pages[navigationProvider.selectedIndex],
-
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.purple,
@@ -76,6 +70,43 @@ class HomeScreen extends StatelessWidget {
           BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Alertas'),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
         ],
+      ),
+    );
+  }
+}
+
+class RefreshableWrapper extends StatelessWidget {
+  final Widget child;
+  final Future<void> Function()? onRefresh;
+  
+  const RefreshableWrapper({
+    super.key,
+    required this.child,
+    this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      color: Colors.purple, // Cor do indicador de refresh
+      backgroundColor: Colors.white, // Cor de fundo
+      displacement: 40.0, // Posição do indicador
+      edgeOffset: 0, // Começa desde o topo
+      onRefresh: onRefresh ?? () async {
+        // Lógica padrão caso não seja fornecido um onRefresh específico
+        await Future.delayed(const Duration(seconds: 1));
+        
+        // Se a página for Stateful e tiver um método refresh, chame:
+        // if (child is RefreshablePage) {
+        //   await (child as RefreshablePage).refreshData();
+        // }
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height,
+          child: child,
+        ),
       ),
     );
   }

@@ -71,16 +71,16 @@ class _HomePageState extends State<HomePage> {
     try {
       final periodo = _getApiPeriodo(selectedFilter);
       final consumptionResponse = await http.get(
-        Uri.parse('http://10.0.2.2:5000/servicos/crud-dados/consumo-real?periodo=$periodo'),
+        Uri.parse('http://3.238.96.189:8080/servicos/crud-dados/consumo-real?periodo=$periodo'),
       );
       final generationResponse = await http.get(
-        Uri.parse('http://10.0.2.2:5000/servicos/crud-dados/producao-real?periodo=$periodo'),
+        Uri.parse('http://3.238.96.189:8080/servicos/crud-dados/producao-real?periodo=$periodo'),
       );
       final predictedConsumptionResponse = await http.get(
-        Uri.parse('http://10.0.2.2:5000/servicos/crud-dados/previsao-consumo?periodo=$periodo'),
+        Uri.parse('http://3.238.96.189:8080/servicos/crud-dados/previsao-consumo?periodo=$periodo'),
       );
       final predictedGenerationResponse = await http.get(
-        Uri.parse('http://10.0.2.2:5000/servicos/crud-dados/previsao-producao?periodo=$periodo'),
+        Uri.parse('http://3.238.96.189:8080/servicos/crud-dados/previsao-producao?periodo=$periodo'),
       );
 
       if (consumptionResponse.statusCode == 200 &&
@@ -174,6 +174,7 @@ Widget build(BuildContext context) {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(height: 20,),
             // Seletor de período
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -240,7 +241,7 @@ Widget build(BuildContext context) {
                     color2: Colors.purple,
                   ),
                 ),
-                const SizedBox(width: 10),
+               // const SizedBox(width: 10),
                 Expanded(
                   child: _buildComparisonCard(
                     title: "Consumo vs Geração (Previsto)",
@@ -256,7 +257,7 @@ Widget build(BuildContext context) {
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
 
             // // Alerta de Produção
             // Container(
@@ -401,11 +402,12 @@ Widget build(BuildContext context) {
       BarChartData(
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (double value, TitleMeta meta) {
-                List<String> labels = ["Consumo", "Geração"];
+                List<String> labels = ["C", "G"];
                 return SideTitleWidget(
                   meta: meta,
                   space: 5,
@@ -420,41 +422,51 @@ Widget build(BuildContext context) {
               },
             ),
           ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false)
+          ),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false)
+          )
         ),
         barGroups: _generateBarGroups(data, color1, color2),
+        gridData: FlGridData(show: true)
       ),
     );
   }
 
-  List<BarChartGroupData> _generateBarGroups(
-    Map<String, List<double>> data,
-    Color color1,
-    Color color2,
-  ) {
-    List<double> values = data[selectedFilter] ?? [0.0, 0.0]; // Use valores padrão se o filtro não estiver presente
-    return [
-      BarChartGroupData(
-        x: 0,
-        barRods: [
-          BarChartRodData(
-            toY: values.isNotEmpty ? values[0] : 0.0, // Verifica se há dados
-            color: color1,
-            width: 40,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ],
-      ),
-      BarChartGroupData(
-        x: 1,
-        barRods: [
-          BarChartRodData(
-            toY: values.length > 1 ? values[1] : 0.0, // Verifica se há dados
-            color: color2,
-            width: 40,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ],
-      ),
-    ];
-  }
+    List<BarChartGroupData> _generateBarGroups(
+  Map<String, List<double>> data,
+  Color color1,
+  Color color2,
+) {
+  List<double> values = data[selectedFilter] ?? [0.0, 0.0];
+  
+  return [
+    BarChartGroupData(
+      x: 0,
+      barRods: [
+        BarChartRodData(
+          // Arredonda para 2 casas decimais
+          toY: values.isNotEmpty ? double.parse(values[0].toStringAsFixed(2)) : 0.0,
+          color: color1,
+          width: 30,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ],
+    ),
+    BarChartGroupData(
+      x: 1,
+      barRods: [
+        BarChartRodData(
+          // Arredonda para 2 casas decimais
+          toY: values.length > 1 ? double.parse(values[1].toStringAsFixed(2)) : 0.0,
+          color: color2,
+          width: 30,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ],
+    ),
+  ];
 }
+  }
