@@ -1,12 +1,14 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 import pymysql
+import os
 
+load_dotenv()
 # Configurações do Banco de Dados
-DB_USERNAME = "engdoacaii"
-DB_PASSWORD = "p3smartvolt"
-DB_NAME = "smartvolt"
-DB_HOST = "smartvoltinstancia.cwt38ijjojpt.us-east-1.rds.amazonaws.com"
+DB_USERNAME = os.getenv("DB_USERNAME")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+DB_HOST = os.getenv("DB_HOST")
 DB_PORT = 3306  # Porta padrão do MySQL
 
 app = Flask(__name__)

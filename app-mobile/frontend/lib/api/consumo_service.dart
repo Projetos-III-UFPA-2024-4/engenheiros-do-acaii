@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ConsumoService {
-  static const baseUrl = 'http://3.238.96.189:8080/servicos/crud-dados';
+  static const baseUrl = 'http://3.228.24.214:8080/servicos/crud-dados';
 
   // Chama o endpoint de produção, passando o parâmetro de período
   static Future<Map<String, dynamic>> getConsumoReal(String periodo) async {

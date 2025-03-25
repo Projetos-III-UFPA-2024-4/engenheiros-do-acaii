@@ -40,9 +40,9 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   static final List<Widget> _pages = [
-    const RefreshableWrapper(child: HomePage()),
-    const RefreshableWrapper(child: ConsumptionPage()),
-    const RefreshableWrapper(child: GenerationPage()),
+    HomePage(),
+    ConsumptionPage(),
+    GenerationPage(),
     const RefreshableWrapper(child: AlertsPage()),
     const RefreshableWrapper(child: ChatPage()),
   ];

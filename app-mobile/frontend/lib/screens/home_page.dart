@@ -71,16 +71,16 @@ class _HomePageState extends State<HomePage> {
     try {
       final periodo = _getApiPeriodo(selectedFilter);
       final consumptionResponse = await http.get(
-        Uri.parse('http://3.238.96.189:8080/servicos/crud-dados/consumo-real?periodo=$periodo'),
+        Uri.parse('http://3.228.24.214:8080/servicos/crud-dados/consumo-real?periodo=$periodo'),
       );
       final generationResponse = await http.get(
-        Uri.parse('http://3.238.96.189:8080/servicos/crud-dados/producao-real?periodo=$periodo'),
+        Uri.parse('http://3.228.24.214:8080/servicos/crud-dados/producao-real?periodo=$periodo'),
       );
       final predictedConsumptionResponse = await http.get(
-        Uri.parse('http://3.238.96.189:8080/servicos/crud-dados/previsao-consumo?periodo=$periodo'),
+        Uri.parse('http://3.228.24.214:8080/servicos/crud-dados/previsao-consumo?periodo=$periodo'),
       );
       final predictedGenerationResponse = await http.get(
-        Uri.parse('http://3.238.96.189:8080/servicos/crud-dados/previsao-producao?periodo=$periodo'),
+        Uri.parse('http://3.228.24.214:8080/servicos/crud-dados/previsao-producao?periodo=$periodo'),
       );
 
       if (consumptionResponse.statusCode == 200 &&
@@ -154,132 +154,135 @@ Widget build(BuildContext context) {
   String textoFatura;
   switch (selectedFilter) {
     case "Dia":
-      textoFatura = "Valor estimado da fatura de hoje";
+      textoFatura = "Valor estimado da fatura de hoje (Consumo - Produção)";
       break;
     case "Semana":
-      textoFatura = "Valor estimado da fatura dos últimos 7 dias";
+      textoFatura = "Valor estimado da fatura da semana (Consumo - Produção)";
       break;
     case "Mês":
-      textoFatura = "Valor estimado da fatura deste mês";
+      textoFatura = "Valor estimado da fatura do mês (Consumo - Produção)";
       break;
     default:
-      textoFatura = "Valor estimado da próxima fatura";
+      textoFatura = "Valor estimado da próxima fatura ";
   }
 
   return Scaffold(
     backgroundColor: Colors.grey[200],
-    body: SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 20,),
-            // Seletor de período
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildFilterButton("Dia"),
-                _buildFilterButton("Semana"),
-                _buildFilterButton("Mês"),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // Cartões de Consumo e Produção com valores dinâmicos
-            Row(
-              children: [
-                Expanded(
-                  child: _buildCard(
-                    icon: Icons.flash_on,
-                    title: "Consumo",
-                    value: "${consumoReal.toStringAsFixed(2)} kWh", // Duas casas decimais
-                    price: "R\$ ${(consumoReal * kWhRate).toStringAsFixed(2)}", // Duas casas decimais
-                    color: Colors.orange,
+    body: RefreshIndicator(
+      onRefresh: _fetchData,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 40,),
+              // Seletor de período
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildFilterButton("Dia"),
+                  _buildFilterButton("Semana"),
+                  _buildFilterButton("Mês"),
+                ],
+              ),
+      
+              const SizedBox(height: 20),
+      
+              // Cartões de Consumo e Produção com valores dinâmicos
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCard(
+                      icon: Icons.flash_on,
+                      title: "Consumo",
+                      value: "${consumoReal.toStringAsFixed(2)} kWh", // Duas casas decimais
+                      price: "R\$ ${(consumoReal * kWhRate).toStringAsFixed(2)}", // Duas casas decimais
+                      color: Colors.orange,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildCard(
-                    icon: Icons.wb_sunny,
-                    title: "Produção",
-                    value: "${geracaoReal.toStringAsFixed(2)} kWh", // Duas casas decimais
-                    price: "R\$ ${(geracaoReal * kWhRate).toStringAsFixed(2)}", // Duas casas decimais
-                    color: Colors.orange,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildCard(
+                      icon: Icons.wb_sunny,
+                      title: "Produção",
+                      value: "${geracaoReal.toStringAsFixed(2)} kWh", // Duas casas decimais
+                      price: "R\$ ${(geracaoReal * kWhRate).toStringAsFixed(2)}", // Duas casas decimais
+                      color: Colors.orange,
+                    ),
                   ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            // Cartão de Estimativa de Fatura com valores dinâmicos
-            _buildCard(
-              icon: Icons.attach_money,
-              title: textoFatura, // Texto dinâmico
-              value: "${diferencaConsumoProducao.toStringAsFixed(2)} kWh", // Diferença entre consumo e produção
-              price: "R\$ ${valorEstimadoFatura.toStringAsFixed(2)}", // Valor estimado da fatura
-              color: Colors.purple,
-              fullWidth: true,
-            ),
-
-            const SizedBox(height: 20),
-
-            // Gráficos Comparativos (lado a lado)
-            Row(
-              children: [
-                Expanded(
-                  child: _buildComparisonCard(
-                    title: "Consumo vs Geração (Real)",
-                    data: {
-                      "Dia": [consumoReal, geracaoReal],
-                      "Semana": [consumoReal, geracaoReal],
-                      "Mês": [consumoReal, geracaoReal],
-                    },
-                    color1: const Color.fromRGBO(255, 152, 0, 1),
-                    color2: Colors.purple,
+                ],
+              ),
+      
+              const SizedBox(height: 10),
+      
+              // Cartão de Estimativa de Fatura com valores dinâmicos
+              _buildCard(
+                icon: Icons.attach_money,
+                title: textoFatura, // Texto dinâmico
+                value: "${diferencaConsumoProducao.toStringAsFixed(2)} kWh", // Diferença entre consumo e produção
+                price: "R\$ ${valorEstimadoFatura.toStringAsFixed(2)}", // Valor estimado da fatura
+                color: Colors.purple,
+                fullWidth: true,
+              ),
+      
+              const SizedBox(height: 20),
+      
+              // Gráficos Comparativos (lado a lado)
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildComparisonCard(
+                      title: "Consumo vs Geração (Real)",
+                      data: {
+                        "Dia": [consumoReal, geracaoReal],
+                        "Semana": [consumoReal, geracaoReal],
+                        "Mês": [consumoReal, geracaoReal],
+                      },
+                      color1: const Color.fromRGBO(255, 152, 0, 1),
+                      color2: Colors.purple,
+                    ),
                   ),
-                ),
-               // const SizedBox(width: 10),
-                Expanded(
-                  child: _buildComparisonCard(
-                    title: "Consumo vs Geração (Previsto)",
-                    data: {
-                      "Dia": [previsaoConsumo, previsaoGeracao],
-                      "Semana": [previsaoConsumo, previsaoGeracao],
-                      "Mês": [previsaoConsumo, previsaoGeracao],
-                    },
-                    color1: Colors.orange,
-                    color2: Colors.purple,
+                 // const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildComparisonCard(
+                      title: "Consumo vs Geração (Previsto)",
+                      data: {
+                        "Dia": [previsaoConsumo, previsaoGeracao],
+                        "Semana": [previsaoConsumo, previsaoGeracao],
+                        "Mês": [previsaoConsumo, previsaoGeracao],
+                      },
+                      color1: Colors.orange,
+                      color2: Colors.purple,
+                    ),
                   ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 40),
-
-            // // Alerta de Produção
-            // Container(
-            //   padding: const EdgeInsets.all(16),
-            //   decoration: BoxDecoration(
-            //     color: Colors.yellow.shade100,
-            //     borderRadius: BorderRadius.circular(10),
-            //   ),
-            //   child: Row(
-            //     children: [
-            //       const Icon(Icons.warning, color: Colors.orange, size: 30),
-            //       const SizedBox(width: 10),
-            //       Expanded(
-            //         child: const Text(
-            //           "Atenção! Você está produzindo menos que o esperado. Avalie economizar!",
-            //           style: TextStyle(fontSize: 16),
-            //         ),
-            //       ),
-            //     ],
-            //   ),
-            // ),
-          ],
+                ],
+              ),
+      
+              const SizedBox(height: 40),
+      
+              // // Alerta de Produção
+              // Container(
+              //   padding: const EdgeInsets.all(16),
+              //   decoration: BoxDecoration(
+              //     color: Colors.yellow.shade100,
+              //     borderRadius: BorderRadius.circular(10),
+              //   ),
+              //   child: Row(
+              //     children: [
+              //       const Icon(Icons.warning, color: Colors.orange, size: 30),
+              //       const SizedBox(width: 10),
+              //       Expanded(
+              //         child: const Text(
+              //           "Atenção! Você está produzindo menos que o esperado. Avalie economizar!",
+              //           style: TextStyle(fontSize: 16),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
+            ],
+          ),
         ),
       ),
     ),

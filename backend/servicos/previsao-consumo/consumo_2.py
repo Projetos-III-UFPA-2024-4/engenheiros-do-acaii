@@ -257,9 +257,9 @@ def adicionar_coluna_consumo():
 if __name__ == "__main__":
     #visualizar_dados_do_banco()
     #visualizar_dados_consumo()
-    #inserir_dados_csv()
+    inserir_dados_csv()
     #excluir_dados_tabela()
     #excluir_dados_tabela_previsao_consumo()
     #visualizar_dados_do_banco_producao()
-    visualizar_dados_do_banco_previsao_consumo()
+   # visualizar_dados_do_banco_previsao_consumo()
     #adicionar_coluna_consumo()
